@@ -19,7 +19,10 @@ Ken Li
 ```
 Distributed-Social-Networking
 |
-└── docs/ (General Files)
+├── distributedsocialnetwork/   (Django Files)
+|
+└── docs/                       (General Files)
+
 
 Copy/Paste
 ├──
