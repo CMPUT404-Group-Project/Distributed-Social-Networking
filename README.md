@@ -19,7 +19,7 @@ Ken Li
 ```
 Distributed-Social-Networking
 |
-├── docs/ (General Files)
+└── docs/ (General Files)
 
 Copy/Paste
 ├──
