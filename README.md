@@ -29,6 +29,21 @@ Copy/Paste
 
 ## Instructions
 ### Setup
-\[Insert Setup Instructions\]
+
+**Initialize a virutal environment**
+```
+$ virtualenv --python=python3 venv
+```
+
+**Activate the virtual environment**
+```
+$ source venv/bin/activate
+```
+
+**Install packages from requirements**
+```
+$ pip install -r requirements.txt
+```
+
 ### Run
 \[Insert Running Instructions\]
