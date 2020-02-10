@@ -15,6 +15,12 @@ Justin Liew
 Ken Li
 ```
 
+### Directory Layout
+```
+Distributed-Social-Networking
+|
+├── docs/ (General Files)
+
 ## Instructions
 ### Setup
 \[Insert Setup Instructions\]
