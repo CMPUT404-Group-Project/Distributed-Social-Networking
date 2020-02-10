@@ -20,6 +20,7 @@ Ken Li
 Distributed-Social-Networking
 |
 ├── docs/ (General Files)
+```
 
 ## Instructions
 ### Setup
