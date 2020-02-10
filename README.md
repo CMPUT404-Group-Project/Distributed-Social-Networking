@@ -1,6 +1,11 @@
 # Distributed Social Networking
-## CMPUT 404 Winter 2020 Group Project
-## Group Members:
+
+## Project Overview
+
+### Description
+\[Insert Project Description\]
+
+### Group Members
 ```
 Anders Johnson
 Andrew Smith
@@ -9,3 +14,9 @@ Joseph Potentier
 Justin Liew
 Ken Li
 ```
+
+## Instructions
+### Setup
+\[Insert Setup Instructions\]
+### Run
+\[Insert Running Instructions\]
