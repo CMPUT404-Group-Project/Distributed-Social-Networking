@@ -1,1 +1,1 @@
-web: gunicorn distributedsocialnetwork.wsgi
+web: gunicorn distributedsocialnetwork.distributedsocialnetwork.wsgi
