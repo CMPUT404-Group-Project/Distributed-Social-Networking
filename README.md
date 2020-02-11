@@ -3,7 +3,7 @@
 ## Project Overview
 
 ### Description
-This project is a more manageable implementation of [Diaspora*](https://diasporafoundation.org/), where each team will create a blogging website that allows users to create posts and share them with other users on the same site. Additionally, each site can connect, sharing users and post between sites.
+This project is a more manageable implementation of [Diaspora*](https://diasporafoundation.org/), where each team will create a blogging website that allows users to create and share post with other users on the same site. Additionally, each site can connect, sharing users and post between sites.
 
 ### CMPUT404W20T03 Members
 ```
