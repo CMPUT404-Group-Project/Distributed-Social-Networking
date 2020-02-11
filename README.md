@@ -3,7 +3,7 @@
 ## Project Overview
 
 ### Description
-\[Insert Project Description\]
+This project is a more manageable implementation of [Diaspora*](https://diasporafoundation.org/), where each team will create a blogging website that allows users to create posts and share them with other users on the same site. Additionally, each site can connect, sharing users and post between sites.
 
 ### CMPUT404W20T03 Members
 ```
@@ -16,12 +16,18 @@ Ken Li
 ```
 
 ### Collaborators
-\[Collaborators\]
+```
+Collaborator 1
+Collaborator 2
+```
 
 ### External Source Code
-\[External Source Code\]
+```
+External Source 1
+External Source 2
+```
 
-### Other Teams
+### Working With Teams
 ```
 CMPUT404W20T00
 CMPUT404W20T00
@@ -73,3 +79,18 @@ $ ./manage migrate
 ```
 $ ./manage.py runserver
 ```
+
+## Original Contributors
+```
+Karim Baaba
+Ali Sajedi
+Kyle Richelhoff
+Chris Pavlicek
+Derek Dowling
+Olexiy Berjanskii
+Erin Torbiak
+Abram Hindle
+Braedy Kuzma
+```
+
+*Note: Original 'docs/example-article.json', 'docs/project.org', and 'docs/swagger_doc.yml' can be found at [abramhindle's repo](https://github.com/abramhindle/CMPUT404-project-socialdistribution)*
