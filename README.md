@@ -50,4 +50,14 @@ $ pip install -r requirements.txt
 ```
 
 ### Run
-\[Insert Running Instructions\]
+**Create migrations and migrate**
+```
+$ cd distributedsocialnetwork
+$ ./manage makemigrations [app]
+$ ./manage migrate
+```
+
+**Run Django server**
+```
+$ ./manage.py runserver
+```
