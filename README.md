@@ -82,17 +82,24 @@ $ ./manage migrate
 $ ./manage.py runserver
 ```
 
-## Original Contributors
+## Original Contributors and Licensing
+Original Creator: Abram Hindle
+
+Generally everything is LICENSED under the Apache 2.0 license by Abram Hindle and modified to include every member of our team
+
+All text is licensed under the CC-BY-SA 4.0 http://creativecommons.org/licenses/by-sa/4.0/deed.en_US
+
+Original 'docs/example-article.json', 'docs/project.org', and 'docs/swagger_doc.yml' can be found at [abramhindle's repo](https://github.com/abramhindle/CMPUT404-project-socialdistribution)
+
+Other Contributors
 ```
-Karim Baaba
+Abram Hindle
 Ali Sajedi
-Kyle Richelhoff
+Braedy Kuzma
 Chris Pavlicek
 Derek Dowling
-Olexiy Berjanskii
 Erin Torbiak
-Abram Hindle
-Braedy Kuzma
+Karim Baaba
+Kyle Richelhoff
+Olexiy Berjanskiia
 ```
-
-*Note: Original 'docs/example-article.json', 'docs/project.org', and 'docs/swagger_doc.yml' can be found at [abramhindle's repo](https://github.com/abramhindle/CMPUT404-project-socialdistribution)*
