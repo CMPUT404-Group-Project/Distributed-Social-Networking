@@ -85,7 +85,7 @@ $ ./manage.py runserver
 ## Original Contributors and Licensing
 Generally everything is LICENSED under the Apache 2.0 license by [Abram Hindle](https://github.com/abramhindle) and modified to include members of our team
 
-All text is licensed under the [CC-BY-SA 4.0](http://creativecommons.org/licenses/by-sa/4.0/deed.en_US)
+All text is licensed under the [CC-BY-SA 4.0](http://creativecommons.org/licenses/by-sa/4.0/deed.en_US) license
 
 Original *'docs/example-article.json'*, *'docs/project.org'*, and *'docs/swagger_doc.yml'* can be found at [abramhindle's repo](https://github.com/abramhindle/CMPUT404-project-socialdistribution)
 
