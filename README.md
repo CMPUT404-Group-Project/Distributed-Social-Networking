@@ -89,15 +89,16 @@ $ ./manage.py runserver
 ```
 
 ### Running on Heroku
-
-**Login to Heroku**
+**Create migrations and migrate**
 ```
-$ heroku login
+$ heroku run --app dsnfof python manage.py makemigrations [DJANGOAPP]
+$ heroku run --app dsnfof python manage.py migrate 
 ```
 
-**Create Heroku app
-
-
+**Create superuser**
+```
+$ heroku run --app dsnfof python manage.py createsuperuser
+```
 
 ## Original Contributors and Licensing
 Generally everything is LICENSED under the Apache 2.0 license by [Abram Hindle](https://github.com/abramhindle) and modified to include members of our team
