@@ -22,9 +22,10 @@ Distributed-Social-Networking
 ├── distributedsocialnetwork/   (Django Files)
 |
 └── docs/                       (General Files)
-
+```
 
 Copy/Paste
+```
 ├──
 |   └──
 |   |   ├── 
