@@ -53,6 +53,13 @@ Manual Copy/Paste or use `tree -d -L [depth]`
 
 ## Instructions
 ### Setup
+**Make sure *libpq-dev* and *python-dev* is installed**
+
+*dependencies for psycopg2 and Django-Heroku*
+```
+$ sudo apt-get install libpq-dev python-dev
+```
+
 
 **Initialize a virutal environment**
 ```
@@ -68,6 +75,8 @@ $ source venv/bin/activate
 ```
 $ pip install -r requirements.txt
 ```
+
+
 
 ### Run
 **Create migrations and migrate**
