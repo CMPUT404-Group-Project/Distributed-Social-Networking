@@ -24,7 +24,7 @@ Distributed-Social-Networking
 └── docs/                       (General Files)
 ```
 
-Copy/Paste
+Manual Copy/Paste or use `tree -d -L [depth]`
 ```
 ├──
 |   └──
