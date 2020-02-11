@@ -1,1 +1,1 @@
-web: gunicorn distributedsocialnetwork.distributedsocialnetwork.wsgi
+web: gunicorn --pythonpath distributedsocialnetwork distributedsocialnetwork.wsgi
