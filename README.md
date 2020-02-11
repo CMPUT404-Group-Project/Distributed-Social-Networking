@@ -19,12 +19,14 @@ Ken Li
 ```
 Collaborator 1
 Collaborator 2
+...
 ```
 
 ### External Source Code
 ```
 External Source 1
 External Source 2
+...
 ```
 
 ### Working With Teams
