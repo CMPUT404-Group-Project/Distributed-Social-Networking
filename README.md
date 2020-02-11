@@ -5,7 +5,7 @@
 ### Description
 \[Insert Project Description\]
 
-### Group Members
+### CMPUT404W20T03 Members
 ```
 Anders Johnson
 Andrew Smith
@@ -13,6 +13,18 @@ Daniel Dick
 Joseph Potentier
 Justin Liew
 Ken Li
+```
+
+### Collaborators
+\[Collaborators\]
+
+### External Source Code
+\[External Source Code\]
+
+### Other Teams
+```
+CMPUT404W20T00
+CMPUT404W20T00
 ```
 
 ### Directory Layout
