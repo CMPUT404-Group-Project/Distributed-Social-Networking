@@ -89,6 +89,8 @@ $ ./manage.py runserver
 ```
 
 ### Running on Heroku
+Link: https://dsnfof.herokuapp.com/
+
 **Create migrations and migrate**
 ```
 $ heroku run --app dsnfof python manage.py makemigrations [DJANGOAPP]
