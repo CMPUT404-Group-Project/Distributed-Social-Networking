@@ -67,8 +67,10 @@ class Author(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)                                                               # Generated
     is_superuser = models.BooleanField(default=False)                                                           # Generated
 
-    date_joined = models.DateField(auto_now_add=True)                                                           # Generated
-    last_login = models.DateField(auto_now=True)                                                                # Generated
+    date_joined = models.DateTimeField(auto_now_add=True)                                                       # Generated
+    last_login = models.DateTimeField(auto_now=True)                                                            # Generated
+
+    username = models.CharField(max_length=1, blank=True, default="")
 
     USERNAME_FIELD = 'displayName'
     EMAIL_FIELD = 'email'
