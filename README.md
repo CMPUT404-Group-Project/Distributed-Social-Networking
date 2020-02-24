@@ -40,6 +40,7 @@ CMPUT404W20T00
 Distributed-Social-Networking
 |
 ├── distributedsocialnetwork/   (Django Files)
+|   └── author/                 (Custom User/Author Model)
 |
 └── docs/                       (General Files)
 ```
@@ -93,13 +94,14 @@ Link: https://dsnfof.herokuapp.com/
 
 **Create migrations and migrate**
 ```
-$ heroku run --app dsnfof python manage.py makemigrations [DJANGOAPP]
-$ heroku run --app dsnfof python manage.py migrate 
+$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations [DJANGOAPP1] [DJANGOAPP2]
+$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations
+$ heroku run --app dsnfof python distributedsocialnetwork/manage.py migrate 
 ```
 
 **Create superuser**
 ```
-$ heroku run --app dsnfof python manage.py createsuperuser
+$ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
 ```
 
 ## Original Contributors and Licensing
