@@ -41,8 +41,9 @@ class AuthorAuthenticationForm(forms.ModelForm):
         fields = ('displayName', 'password')
 
     def clean(self):
-        displayName = self.cleaned_data['displayName']
-        password = self.cleaned_data['password']
+        if self.is_valid():
+            displayName = self.cleaned_data['displayName']
+            password = self.cleaned_data['password']
 
-        if not authenticate(displayName=displayName, password=password):
-            raise forms.ValidationError("Invalid login.")
+            if not authenticate(displayName=displayName, password=password):
+                raise forms.ValidationError("Invalid login.")
