@@ -56,7 +56,7 @@ class Author(AbstractBaseUser):
     host = models.CharField(max_length=30, default=currentHost, editable=False)                                 # Generated
     url = models.CharField(max_length=70, default=currentHost + 'author/' + str(generatedUUID), editable=False) # Generated
     displayName = models.CharField(max_length=150, blank=False, unique=True)                                    # Required
-    github = models.CharField(max_length=255, blank=True)                                                       # Optional
+    github = models.CharField(max_length=255, default="", blank=True)                                                       # Optional
 
     # Other Fields
     first_name = models.CharField(max_length=30, blank=False)                                                   # Required

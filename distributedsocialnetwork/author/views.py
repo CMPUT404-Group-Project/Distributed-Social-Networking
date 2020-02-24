@@ -40,9 +40,28 @@ def createAuthorView(request):
 
     return render(request, 'register.html', context)
 
-def logoutView(request):
-    logout(request)
-    return redirect(reverse_lazy('home'))
+def changeAuthorView(request):
+    if not request.user.is_authenticated:
+        return redirect(reverse_lazy('login'))
+    
+    context = {}
+
+    if request.POST:
+        form = AuthorChangeForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse_lazy('home'))
+    else:
+        form = AuthorChangeForm(
+            initial = {
+                "first_name": request.user.first_name,
+                "last_name": request.user.last_name,
+                "github": request.user.github,
+            }
+        )
+
+    context['updateForm'] = form
+    return render(request, 'update.html', context)
 
 def loginView(request):
     context = {}
@@ -66,3 +85,7 @@ def loginView(request):
 
     context['loginForm'] = form
     return render(request, 'login.html', context)
+
+def logoutView(request):
+    logout(request)
+    return redirect(reverse_lazy('home'))
