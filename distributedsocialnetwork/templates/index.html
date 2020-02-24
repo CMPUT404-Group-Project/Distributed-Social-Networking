@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="border: 0.1em solid black">
+	<h2>Registered Authors</h1>
+
+	{% for author in authors %}
+	    <p>{{author}}</p>
+	{% endfor %}
+</div>
+
+{% endblock  %}
