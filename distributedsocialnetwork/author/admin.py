@@ -21,6 +21,7 @@ class AuthorAdmin(UserAdmin):
     fieldsets = (
         (None, {
             'fields':(
+                'password',
                 'displayName',
                 'email',
                 'first_name',

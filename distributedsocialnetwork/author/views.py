@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
+from django.urls import reverse_lazy
 
-from .forms import AuthorCreationForm, AuthorChangeForm
+from .forms import AuthorCreationForm, AuthorChangeForm, AuthorAuthenticationForm
 from .models import Author
 
 
@@ -27,11 +28,12 @@ def createAuthorView(request):
             last_name = form.cleaned_data.get('last_name')
             github = form.cleaned_data.get('github')
             raw_password = form.cleaned_data.get('password1')
-            author = authenticate(displayName, password=raw_password)
-            login(request, author)
-            return redirect('home')
+            author = authenticate(displayName=displayName, password=raw_password, email=email, first_name=first_name, last_name=last_name, github=github)
+            # login(request, author) # Cannot log in since is_active is default to false, admin has to accept before they can login
+            return redirect(reverse_lazy('home'))
         else:
             context['form'] = form
+
     else:
         form = AuthorCreationForm()
         context['form'] = form
@@ -40,4 +42,27 @@ def createAuthorView(request):
 
 def logoutView(request):
     logout(request)
-    return redirect('home')
+    return redirect(reverse_lazy('home'))
+
+def loginView(request):
+    context = {}
+
+    user = request.user
+    if user.is_authenticated:
+        return redirect(reverse_lazy('home'))
+
+    if request.POST:
+        form = AuthorAuthenticationForm(request.POST)
+        if form.is_valid():
+            displayName = request.POST['displayName']
+            password = request.POST['password']
+            user = authenticate(displayName=displayName, password=password)
+
+            if user:
+                login(request, user)
+                return redirect(reverse_lazy('home'))
+    else:
+        form = AuthorAuthenticationForm()
+
+    context['loginForm'] = form
+    return render(request, 'login.html', context)
