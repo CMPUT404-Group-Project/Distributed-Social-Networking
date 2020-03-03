@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
     # Custom Apps
     'author',
+    'post',
 ]
 
 AUTH_USER_MODEL = 'author.Author'
