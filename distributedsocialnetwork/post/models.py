@@ -35,9 +35,8 @@ class Post(models.Model):
     # TODO: once we have a comments model we can add this in
     # comments = models.ForeignKey(Comment, on_delete=models.CASCADE)
     # count
-    # size
     # next
-
+    size = models.IntegerField(default=50)
     published = models.DateTimeField(auto_now=True)
     id = models.CharField(max_length=32, default=generatedUUID,
                           editable=False, unique=True, primary_key=True)
