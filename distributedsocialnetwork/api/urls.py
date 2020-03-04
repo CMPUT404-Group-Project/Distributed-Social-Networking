@@ -15,10 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from .views import PostViewSet
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('author.urls')),
-    path('posts', include('post.urls')),
-    path('api/', include('api.urls')),
+    path('posts', PostViewSet.as_view(
+        {'get': 'list'}), name="public_posts_list"),
 ]

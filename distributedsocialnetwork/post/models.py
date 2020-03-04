@@ -31,11 +31,6 @@ class Post(models.Model):
     content = models.TextField()
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     categories = models.CharField(max_length=200, blank=True)
-
-    # TODO: once we have a comments model we can add this in
-    # comments = models.ForeignKey(Comment, on_delete=models.CASCADE)
-    # count and next can be calculated in views.py
-
     size = models.IntegerField(default=50)  # The number of comments per page
     published = models.DateTimeField(auto_now=True)
     id = models.CharField(max_length=32, default=generatedUUID,
@@ -51,3 +46,25 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Comment(models.Model):
+    generatedUUID = uuid.uuid4().hex
+    CONTENT_TYPE_CHOICES = [
+        ('text/markdown', 'text/markdown'),
+        ('text/plain', 'text/plain'),
+        ('application/base64', 'application/base64'),
+        ('image/png;base64', 'image/png;base64'),
+        ('image/jpeg;base64', 'image/jpeg;base64'),
+    ]
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+    comment = models.TextField()
+    published = models.DateTimeField(auto_now=True)
+    contentType = models.CharField(
+        max_length=20, choices=CONTENT_TYPE_CHOICES, default='text/plain')
+    post_id = models.ForeignKey(Post, on_delete=models.CASCADE)
+    id = models.CharField(max_length=32, default=generatedUUID,
+                          editable=False, unique=True, primary_key=True)
+
+    def __str__(self):
+        return str(self.author) + str(self.published)

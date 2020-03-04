@@ -3,7 +3,8 @@ from django.http import JsonResponse, HttpResponse
 import math
 from django.contrib.sites.shortcuts import get_current_site
 from django.forms.models import model_to_dict
-
+import json
+from .serializers import PostSerializer
 from .models import Post
 from author.models import Author
 # Create your views here.
@@ -30,7 +31,6 @@ def public_posts_list(request):
 
         # Total number of posts with PUBLIC filter
         post_count = Post.objects.filter(visibility="PUBLIC").count()
-
         if math.ceil(post_count / int(size)) < (int(page)+1):
             # They have requested a page which is not possible to serve.
             return HttpResponse(status=400)
@@ -39,7 +39,8 @@ def public_posts_list(request):
         # The number we are serving on this page
         posts = Post.objects.filter(visibility="PUBLIC")[
             offset:offset + int(size)]
-
+        print(json.dumps(PostSerializer(
+            posts[0], context={'request': request}).data))
         has_previous = True
         has_next = True
 
