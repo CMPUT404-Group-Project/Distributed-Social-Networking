@@ -15,9 +15,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .views import PostViewSet
+from .views import PostDetailView, PublicPostView
+
 
 urlpatterns = [
-    path('posts', PostViewSet.as_view(
-        {'get': 'list'}), name="public_posts_list"),
+    # path('posts', PublicPostView.as_view(), name="public-posts"),
+    path('posts', PublicPostView.as_view(), name='public-posts'),
+    path('posts/<uuid:pk>/', PostDetailView.as_view(), name="posts-detail"),
 ]

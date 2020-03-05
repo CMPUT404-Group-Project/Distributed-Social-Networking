@@ -33,8 +33,7 @@ class Post(models.Model):
     categories = models.CharField(max_length=200, blank=True)
     size = models.IntegerField(default=50)  # The number of comments per page
     published = models.DateTimeField(auto_now=True)
-    id = models.CharField(max_length=32, default=generatedUUID,
-                          editable=False, unique=True, primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default="PUBLIC")
     visibleTo = models.CharField(max_length=200, blank=True)
@@ -63,8 +62,7 @@ class Comment(models.Model):
     contentType = models.CharField(
         max_length=20, choices=CONTENT_TYPE_CHOICES, default='text/plain')
     post_id = models.ForeignKey(Post, on_delete=models.CASCADE)
-    id = models.CharField(max_length=32, default=generatedUUID,
-                          editable=False, unique=True, primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     def __str__(self):
         return str(self.author) + str(self.published)

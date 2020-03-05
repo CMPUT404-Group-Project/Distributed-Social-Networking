@@ -24,13 +24,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     # Serializes a post in the way the API specifies.
+    # comments = serializers.SerializerMethodField('paginated_comment')
     comments = serializers.SerializerMethodField('paginated_comment')
     author = AuthorSerializer()
 
     class Meta:
         model = Post
         fields = ['title', 'source', 'origin', 'description', 'contentType',
-                  'content',  'author', 'categories', 'comments']
+                  'content',  'author', 'categories', 'comments', 'published',
+                  'visibility', 'id']
 
     # From: https://stackoverflow.com/a/49677960
     def paginated_comment(self, obj):
