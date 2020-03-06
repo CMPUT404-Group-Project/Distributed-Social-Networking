@@ -61,7 +61,8 @@ class Comment(models.Model):
     published = models.DateTimeField(auto_now=True)
     contentType = models.CharField(
         max_length=20, choices=CONTENT_TYPE_CHOICES, default='text/plain')
-    post_id = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post_id = models.ForeignKey(
+        Post, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     def __str__(self):
