@@ -102,7 +102,7 @@ class PostDetailView(APIView):
             comments_all = Comment.objects.filter(post_id=post["id"])
             post['count'] = len(comments_all)
             post['next'] = 'http://' + request.get_host() + request.path + \
-                post["id"] + '/comments'
+                'comments'
             comment_paginator = Paginator(comments_all, page_size)
             comment_page = comment_paginator.get_page(1)
             post['comments'] = CommentSerializer(comment_page, many=True).data
@@ -123,8 +123,12 @@ class PostDetailView(APIView):
         return Response(response)
 
     def post(self, request, pk):
-        # We are given a pk, so either we are:
-        # a)
+        # This is used for two different purposes:
+        # 1) Adding a new post
+        # 2) Requesting a post for FOAF purposes
+        # The latter involves the friends system, which is not implemented.
+        # The documentation does not specify what the POSTing a Post is supposed to look like.
+        # I assume that it is similar to
         pass
 
 
@@ -157,16 +161,18 @@ class CommentList(APIView):
         return Response(response)
 
     def post(self, request, pk):
-        # We insert a comment to this post's comment
-        comment = request.data["comment"]
-        # Our comment model has an author field that is just an ID. So we have to strip that out
-        comment["author"] = comment["author"]["id"]
-        serializer = CommentSerializer(data=comment)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "query": "addComment",
-                "success": True,
-                "message": "Comment Added"
-            }, status=status.HTTP_201_CREATED)
+        if request.headers["Content-Type"] == 'application/json':
+            # We insert a comment to this post's comments
+            comment = request.data["comment"]
+            # Our comment model has an author field that is just an ID. So we have to strip that out
+            comment["author"] = comment["author"]["id"]
+            serializer = CommentSerializer(
+                data=comment, context={'request': request, "pk": pk})
+            if serializer.is_valid():
+                serializer.create(serializer.validated_data)
+                return Response({
+                    "query": "addComment",
+                    "success": True,
+                    "message": "Comment Added"
+                }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
