@@ -83,7 +83,8 @@ WSGI_APPLICATION = 'distributedsocialnetwork.wsgi.application'
 # We can set standard pagination rules here
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50
+    'PAGE_SIZE': 50,
+    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',
 }
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases

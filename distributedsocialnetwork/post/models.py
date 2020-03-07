@@ -1,6 +1,7 @@
 from django.db import models
 from author.models import Author
 import uuid
+import datetime
 # Create your models here.
 
 
@@ -21,7 +22,7 @@ class Post(models.Model):
         ("PRIVATE", "Private"),
         ("SERVERONLY", "Server Only"),
     ]
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=100)
     source = models.URLField(max_length=100)
     origin = models.URLField(max_length=100)
@@ -31,9 +32,7 @@ class Post(models.Model):
     content = models.TextField()
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     categories = models.CharField(max_length=200, blank=True)
-    size = models.IntegerField(default=50)  # The number of comments per page
-    published = models.DateTimeField(auto_now=True)
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    published = models.DateTimeField()
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default="PUBLIC")
     visibleTo = models.CharField(max_length=200, blank=True)
@@ -45,6 +44,12 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+
+    def create(self, args, **kwargs):
+        # This is to ensure that we can insert our own timestamps into the published field
+        if published == None:
+            published = datetime.datetime.now()
+        super(Post, self).save(args, **kwargs)
 
 
 class Comment(models.Model):
@@ -58,7 +63,7 @@ class Comment(models.Model):
     ]
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     comment = models.TextField()
-    published = models.DateTimeField(auto_now=True)
+    published = models.DateTimeField()
     contentType = models.CharField(
         max_length=20, choices=CONTENT_TYPE_CHOICES, default='text/plain')
     post_id = models.ForeignKey(
@@ -67,3 +72,9 @@ class Comment(models.Model):
 
     def __str__(self):
         return str(self.author) + str(self.published)
+
+    def create(self, args, **kwargs):
+        # This is to ensure that we can insert our own timestamps into the published field
+        if published == None:
+            published = datetime.datetime.now()
+        super(Post, self).save(args, **kwargs)
