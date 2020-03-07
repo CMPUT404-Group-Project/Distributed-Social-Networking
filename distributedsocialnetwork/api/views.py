@@ -1,12 +1,9 @@
-from rest_framework import generics, viewsets, mixins, permissions, status
+from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
 from post.models import Post, Comment
 from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404
 
 # Create your views here.
 

@@ -1,17 +1,9 @@
 # Serializers for Posts and Comments
 import datetime
 from rest_framework import serializers, fields
-
 from .models import Post, Comment
-
 from author.models import Author
 from author.serializers import AuthorSerializer
-
-from json import loads, dumps
-
-from django.core.paginator import Paginator
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
 
 
 class CommentSerializer(serializers.ModelSerializer):
