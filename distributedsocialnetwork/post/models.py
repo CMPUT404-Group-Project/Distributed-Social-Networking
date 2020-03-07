@@ -1,7 +1,8 @@
-from django.db import models
-from author.models import Author
 import uuid
 import datetime
+from django.db import models
+from author.models import Author
+
 # Create your models here.
 
 
@@ -77,4 +78,4 @@ class Comment(models.Model):
         # This is to ensure that we can insert our own timestamps into the published field
         if published == None:
             published = datetime.datetime.now()
-        super(Post, self).save(args, **kwargs)
+        super(Comment, self).save(args, **kwargs)
