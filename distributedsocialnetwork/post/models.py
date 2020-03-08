@@ -69,6 +69,10 @@ class Comment(models.Model):
         Post, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
 
+    class Meta:
+        # Orders comments by the time they were published, in descending order
+        ordering = ['-published']
+
     def __str__(self):
         return str(self.author) + str(self.published)
 
