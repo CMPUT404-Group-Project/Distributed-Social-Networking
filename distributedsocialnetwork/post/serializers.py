@@ -31,7 +31,7 @@ class CommentSerializer(serializers.ModelSerializer):
         post_id = self.context["pk"]
         if post_id != data["post_id"].id:
             raise serializers.ValidationError(
-                "You cannot post a comment to a different post. ID given was " + str(data["post_id"].id) + ' and URI was for '+str(post_pk))
+                "You cannot post a comment to a different post. ID given was " + str(data["post_id"].id) + ' and URI was for '+str(post_id))
         return super(CommentSerializer, self).validate(data)
 
 
