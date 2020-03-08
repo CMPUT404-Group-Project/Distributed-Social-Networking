@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block nav-profile%}<a class="nav-link active" href="{% url 'update' %}">My Profile</a>{% endblock %}
+{% block nav-profile%}<a class="nav-link active" href="{% url 'update' %}">{{ request.user|title}}</a>{% endblock %}
 
 
 {% block content %}

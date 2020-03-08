@@ -11,26 +11,26 @@
     {% csrf_token %}
 
     {% for field in loginForm %}
-        <p>
-            {{field.label_tag}}
-            {{field}}
+    <p>
+        {{field.label_tag}}
+        {{field}}
 
-            {% if field.help_text %}
-                <small style="color: gray;">{{field.help_text}}</small>
-            {% endif %}
-        </p>
+        {% if field.help_text %}
+        <small style="color: gray;">{{field.help_text}}</small>
+        {% endif %}
+    </p>
     {% endfor %}
 
     {% for field in loginForm %}
-        {% for error in field.errors %}
-        <p style="color: red;">{{error}}</p>
-        {% endfor %}
+    {% for error in field.errors %}
+    <p style="color: red;">{{error}}</p>
+    {% endfor %}
     {% endfor %}
 
     {% if loginForm.non_field_errors %}
-        <div style="color: red">
-            <p>{{loginForm.non_field_errors}}</p>
-        </div>
+    <div style="color: red">
+        <p>{{loginForm.non_field_errors}}</p>
+    </div>
     {% endif %}
 
     <button type="submit">Log In</button>
