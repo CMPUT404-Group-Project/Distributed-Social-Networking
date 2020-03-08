@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block nav-register%}<a class="nav-link active" href="{% url 'register' %}">Get Started</a>{% endblock %}
+
 {% block content %}
 
 <h2>Register</h2>
@@ -7,18 +9,18 @@
     {% csrf_token %}
 
     {% for field in form %}
-        <p>
-            {{field.label_tag}}
-            {{field}}
+    <p>
+        {{field.label_tag}}
+        {{field}}
 
-            {% if field.help_text %}
-                <small style="color: gray;">{{field.help_text}}</small>
-            {% endif %}
+        {% if field.help_text %}
+        <small style="color: gray;">{{field.help_text}}</small>
+        {% endif %}
 
-            {% for error in field.errors %}
-                <p style="color: red;">{{error}}</p>
-            {% endfor %}
-        </p>
+        {% for error in field.errors %}
+        <p style="color: red;">{{error}}</p>
+        {% endfor %}
+    </p>
     {% endfor %}
 
     <button type="submit">Create</button>

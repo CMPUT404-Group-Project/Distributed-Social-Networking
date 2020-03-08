@@ -4,8 +4,11 @@ from rest_framework.response import Response
 from post.models import Post, Comment
 from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
+from django.urls import reverse
 
 # Create your views here.
+
+# ====== /api/posts ======
 
 
 class VisiblePosts(APIView):
@@ -66,6 +69,8 @@ class VisiblePosts(APIView):
 
         response["posts"] = serialized_posts
         return Response(response)
+
+# ====== /api/posts/<post_id> ======
 
 
 class PostDetailView(APIView):
@@ -212,6 +217,8 @@ class PostDetailView(APIView):
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
+# ====== /api/posts/<post_id>/comments ======
+
 
 class CommentList(APIView):
     def get(self, request, pk):
@@ -285,3 +292,153 @@ class CommentList(APIView):
             "query": "addComment",
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+# ====== /api/author/posts ======
+
+
+class AuthUserPosts(APIView):
+    # Returns all accessible posts for the currently authenticated user
+    # If a user is authenticated:
+    # * Return the public posts on this server
+    # * Return the user's posts
+    # * Return privated posts where the user is in the "visibleTo" list
+    # * Return posts that the user's friends/people have marked as "visible to friends" (TODO: Need friends)
+    # * Return posts that the user's friends of friends have visible to "friends of friends" (TODO: Need friends)
+
+    def get(self, request):
+        response = {'query': "posts"}
+        if request.user.is_authenticated:
+            # The user is logged in, so we send them all posts they can see
+            public_posts = Post.objects.filter(visibility="PUBLIC")
+            user_posts = Post.objects.filter(author=request.user)
+            privated_posts = Post.objects.filter(
+                visibility="PRIVATE", visibleTo__icontains=request.user.id)
+            posts = public_posts | user_posts | privated_posts
+        else:
+            # They are not logged in and authenticated. So
+            posts = Post.objects.filter(visibility="PUBLIC")
+        response["count"] = len(posts)
+        page_size = request.GET.get("size")
+        if not page_size:
+            page_size = 50
+        response["size"] = page_size
+        page_num = request.GET.get("page")
+        if not page_num:
+            page_num = 0
+        paginator = Paginator(posts, page_size)
+        # Paginator assumes first page is page 1, which is not to spec
+        page = paginator.get_page(str(int(page_num) + 1))
+        # We add links to the next and previous page, if they exist
+        if page.has_next():
+            response["next"] = 'http://' + \
+                request.get_host() + request.path[:-1] + \
+                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
+        if page.has_previous():
+            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
+                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
+
+        # The serializer takes care of a lot of this stuff, but we will need to add
+        # certain things (comments, etc) to each page before we add them to the response
+        serializer = PostSerializer(page, many=True)
+        serialized_posts = serializer.data
+        for post in serialized_posts:
+            post['size'] = page_size
+            comments_all = Comment.objects.filter(post_id=post["id"])
+            post['count'] = len(comments_all)
+            post['next'] = 'http://' + request.get_host() + reverse('public-posts') + \
+                post["id"] + '/comments'
+            comment_paginator = Paginator(comments_all, page_size)
+            comment_page = comment_paginator.get_page(1)
+            serialized_comments = CommentSerializer(
+                comment_page, many=True).data
+            for comment in serialized_comments:
+                comment.pop('post_id')
+            post['comments'] = serialized_comments
+
+            # Both visibleTo and categories are charfields
+            # We split on ',' for these
+            if post['visibleTo'] == "":
+                # Not set, so "" by default
+                post['visibleTo'] = []
+            else:
+                post['visibleTo'] = post['visibleTo'].split(',')
+            if post['categories'] == "":
+                post['categories'] = []
+            else:
+                post['categories'] = post['categories'].split(',')
+
+        response["posts"] = serialized_posts
+        return Response(response)
+
+# ====== /api/author/posts/<author_id>/posts ======
+
+
+class AuthorPosts(APIView):
+    # Returns all posts from the specified author that the currently authenticated user can see
+    def get(self, request, pk):
+        response = {"query": "posts"}
+        if request.user.is_authenticated:
+            if pk == request.user.id:
+                # This is the author, they should be able to see all their posts
+                posts = Post.objects.filter(author=pk)
+            else:
+                # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
+                author_public_posts = Post.objects.filter(
+                    author=pk, visibility="PUBLIC")
+                author_private_posts = Post.objects.filter(
+                    author=pk, visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                posts = author_public_posts | author_private_posts
+        else:
+            posts = Post.objects.filter(author=pk, visibility="PUBLIC")
+        response["count"] = len(posts)
+        page_size = request.GET.get("size")
+        if not page_size:
+            page_size = 50
+        response["size"] = page_size
+        page_num = request.GET.get("page")
+        if not page_num:
+            page_num = 0
+        paginator = Paginator(posts, page_size)
+        # Paginator assumes first page is page 1, which is not to spec
+        page = paginator.get_page(str(int(page_num) + 1))
+        # We add links to the next and previous page, if they exist
+        if page.has_next():
+            response["next"] = 'http://' + \
+                request.get_host() + request.path[:-1] + \
+                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
+        if page.has_previous():
+            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
+                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
+
+        # The serializer takes care of a lot of this stuff, but we will need to add
+        # certain things (comments, etc) to each page before we add them to the response
+        serializer = PostSerializer(page, many=True)
+        serialized_posts = serializer.data
+        for post in serialized_posts:
+            post['size'] = page_size
+            comments_all = Comment.objects.filter(post_id=post["id"])
+            post['count'] = len(comments_all)
+            post['next'] = 'http://' + request.get_host() + reverse('public-posts') + \
+                post["id"] + '/comments'
+            comment_paginator = Paginator(comments_all, page_size)
+            comment_page = comment_paginator.get_page(1)
+            serialized_comments = CommentSerializer(
+                comment_page, many=True).data
+            for comment in serialized_comments:
+                comment.pop('post_id')
+            post['comments'] = serialized_comments
+
+            # Both visibleTo and categories are charfields
+            # We split on ',' for these
+            if post['visibleTo'] == "":
+                # Not set, so "" by default
+                post['visibleTo'] = []
+            else:
+                post['visibleTo'] = post['visibleTo'].split(',')
+            if post['categories'] == "":
+                post['categories'] = []
+            else:
+                post['categories'] = post['categories'].split(',')
+
+        response["posts"] = serialized_posts
+        return Response(response)

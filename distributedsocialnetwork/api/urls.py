@@ -15,13 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .views import PostDetailView, CommentList, VisiblePosts
+from .views import PostDetailView, CommentList, VisiblePosts, AuthUserPosts, AuthorPosts
 
 
 urlpatterns = [
-    # path('posts', PublicPostView.as_view(), name="public-posts"),
     path('posts/', VisiblePosts.as_view(), name='public-posts'),
     path('posts/<uuid:pk>/', PostDetailView.as_view(), name="posts-detail"),
     path('posts/<uuid:pk>/comments',
-         CommentList.as_view(), name="comments-list")
+         CommentList.as_view(), name="comments-list"),
+    path('author/posts/', AuthUserPosts.as_view(), name="auth-posts"),
+    path('author/<str:pk>/posts', AuthorPosts.as_view(), name="author-posts")
+
 ]

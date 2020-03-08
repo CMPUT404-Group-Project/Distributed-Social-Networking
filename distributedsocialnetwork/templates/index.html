@@ -1,13 +1,32 @@
 {% extends 'base.html' %}
 
-{% block content %}
-
-<div style="border: 0.1em solid black">
-	<h2>Registered Authors</h1>
-
-	{% for author in authors %}
-	    <p>{{author}}</p>
-	{% endfor %}
-</div>
-
+{% block nav-home %}
+<a class="nav-link active" href="{% url 'home' %}">Home</a>
 {% endblock  %}
+
+{% block content %}
+<div class="row">
+  <div class="col-8 container">
+    <div class="row justify-content-center">
+      <h2>STREAM</h2>
+    </div>
+    {% for post in posts %}
+      <div class="row-12">
+        <h4>{{ post.title }}</h4>
+        <p class="small">{{ post.description }}</p>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="col-4 container text-right">
+    <div class="row justify-content-center">
+      <h2>FEATURED AUTHORS</h2>
+    </div>
+    {% for author in authors %}
+    <div class="row-12">
+      <h5>{{ author }}</h5>
+      <p class="small">Last Online: {{ author.last_login }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock content %}
