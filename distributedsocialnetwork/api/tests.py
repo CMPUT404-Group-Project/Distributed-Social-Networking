@@ -1,12 +1,13 @@
-from django.test import TestCase, Client
-from rest_framework import status
-from rest_framework.test import APITestCase, URLPatternsTestCase, force_authenticate, APIRequestFactory
-from author.models import Author
-from post.models import Post, Comment
-from django.urls import include, path, reverse
 import uuid
 import datetime
 import pytz
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.urls import reverse
+from author.models import Author
+from post.models import Post, Comment
+
+
 # Create your tests here.
 
 
