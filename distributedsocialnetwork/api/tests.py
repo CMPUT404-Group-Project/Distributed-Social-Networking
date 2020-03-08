@@ -14,7 +14,8 @@ from post.models import Post, Comment
 class VisiblePosts(APITestCase):
     def setUp(self):
 
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post 1
@@ -143,7 +144,8 @@ class VisiblePosts(APITestCase):
 
 class PostDetailView(APITestCase):
     def setUp(self):
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post 1
@@ -341,7 +343,8 @@ class PostDetailView(APITestCase):
 
 class CommentList(APITestCase):
     def setUp(self):
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post
@@ -510,9 +513,9 @@ class AuthUserPosts(APITestCase):
 
     def setUp(self):
         # We will create two authors, and a few different kinds of posts.
-        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
-        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
 
         # First post will be a public post written by author 1
@@ -555,9 +558,9 @@ class AuthorPosts(APITestCase):
 
     def setUp(self):
         # We will create two authors, and a few different kinds of posts.
-        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
-        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
 
         # First post will be a public post written by author 1
@@ -585,7 +588,8 @@ class AuthorPosts(APITestCase):
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
 
     def test_get_list(self):
-        url = '/api/author/' + self.author1.id + '/posts'
+        author_uuid_blurb = self.author1.id[29:]
+        url = '/api/author/' + author_uuid_blurb + '/posts'
         print("url is", url)
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 1 post
