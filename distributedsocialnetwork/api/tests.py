@@ -1,6 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from rest_framework import status
-from rest_framework.test import APITestCase, URLPatternsTestCase
+from rest_framework.test import APITestCase, URLPatternsTestCase, force_authenticate, APIRequestFactory
 from author.models import Author
 from post.models import Post, Comment
 from django.urls import include, path, reverse
@@ -503,3 +503,99 @@ class CommentList(APITestCase):
         response = self.client.post(url, post_data, format='json')
         # Test to ensure that comment has been rejected
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AuthUserPosts(APITestCase):
+
+    def setUp(self):
+        # We will create two authors, and a few different kinds of posts.
+        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
+
+        # First post will be a public post written by author 1
+        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
+                                         origin="http://firstpost.com/origin", description="This is the first post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+
+        # Second post will be a private post written by author 1, shared with author 2
+        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source="http:secondpost.com",
+                                         origin="http://secondpost.com/origin", description="This is the second post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.author2.id, unlisted=False)
+
+        # Third post will be a public post written by author 2
+        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source="http:thirdpost.com",
+                                         origin="http://thirdpost.com/origin", description="This is the third post",
+                                         author=self.author2, categories="", published=datetime.datetime(
+            2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+
+        # Fourth post will be a private post written by author 1, but NOT shared with author 2
+        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
+
+    def test_get_list(self):
+        url = reverse('auth-posts')
+        response = self.client.get(url, format='json')
+        # Without authenticating, we should be able to retrieve 2 posts
+        self.assertEqual(len(response.data["posts"]), 2)
+        # We log in as author2
+        self.client.force_authenticate(user=self.author2)
+        response = self.client.get(url, format='json')
+        # This user should be able to retrieve 3 posts
+        self.assertEqual(len(response.data["posts"]), 3)
+
+
+class AuthorPosts(APITestCase):
+
+    def setUp(self):
+        # We will create two authors, and a few different kinds of posts.
+        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
+
+        # First post will be a public post written by author 1
+        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
+                                         origin="http://firstpost.com/origin", description="This is the first post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+
+        # Second post will be a private post written by author 1, shared with author 2
+        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source="http:secondpost.com",
+                                         origin="http://secondpost.com/origin", description="This is the second post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.author2.id, unlisted=False)
+
+        # Third post will be a public post written by author 2
+        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source="http:thirdpost.com",
+                                         origin="http://thirdpost.com/origin", description="This is the third post",
+                                         author=self.author2, categories="", published=datetime.datetime(
+            2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+
+        # Fourth post will be a private post written by author 1, but NOT shared with author 2
+        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
+
+    def test_get_list(self):
+        url = '/api/author/' + self.author1.id + '/posts'
+        print("url is", url)
+        response = self.client.get(url, format='json')
+        # Without authenticating, we should be able to retrieve 1 post
+        self.assertEqual(len(response.data["posts"]), 1)
+        # We log in as author2
+        self.client.force_authenticate(user=self.author2)
+        response = self.client.get(url, format='json')
+        # We should be seeing 2 posts
+        self.assertEqual(len(response.data["posts"]), 2)
+        # We log in as author1
+        self.client.force_authenticate(user=self.author1)
+        response = self.client.get(url, format='json')
+        # We should be seeing 3 posts
+        self.assertEqual(len(response.data["posts"]), 3)
