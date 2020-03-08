@@ -7,8 +7,6 @@ from author.models import Author
 
 
 class Post(models.Model):
-    generatedUUID = uuid.uuid4().hex
-
     CONTENT_TYPE_CHOICES = [
         ('text/markdown', 'text/markdown'),
         ('text/plain', 'text/plain'),
