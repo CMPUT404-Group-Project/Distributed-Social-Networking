@@ -42,9 +42,10 @@ INSTALLED_APPS = [
 
     # Custom Apps
     'author',
+    'distributedsocialnetwork',
     'post',
     'api',
-    'rest_framework',
+    'rest_framework'
 ]
 
 AUTH_USER_MODEL = 'author.Author'

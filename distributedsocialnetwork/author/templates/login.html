@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
 
+{% block nav-login %}
+<a class="nav-link active" href="{% url 'login' %}">Sign In</a>
+{% endblock  %}
+
 {% block content %}
 
-<h2>Login</h2>
+<h2>Sign In</h2>
 <form method="POST">
     {% csrf_token %}
 

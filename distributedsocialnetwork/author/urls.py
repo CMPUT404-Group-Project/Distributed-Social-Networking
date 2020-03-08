@@ -1,18 +1,17 @@
-from django.conf.urls import url
 from django.urls import path
 
 from .views import (
     index,
-    createAuthorView,
-    changeAuthorView,
-    loginView,
-    logoutView,
+    create_author,
+    change_author,
+    login_author,
+    logout_author,
 )
 
 urlpatterns = [
-    path('', index, name="home"),
-    path('register/', createAuthorView, name="register"),
-    path('update/', changeAuthorView, name="update"),
-    path('login/', loginView, name="login"),
-    path('logout/', logoutView, name="logout"),
+    path('', index,),
+    path('register/', create_author, name="register"),
+    path('update/', change_author, name="update"),
+    path('login/', login_author, name="login"),
+    path('logout/', logout_author, name="logout"),
 ]
