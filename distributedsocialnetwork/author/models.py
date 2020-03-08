@@ -59,7 +59,7 @@ class Author(AbstractBaseUser):
     #
     currentHost = 'https://dsnfof.herokuapp.com/'
 
-    id = models.CharField(max_length=32, editable=False,
+    id = models.CharField(max_length=70, editable=False,
                           unique=True, primary_key=True)
     host = models.CharField(max_length=30, default=currentHost, editable=False)
     url = models.CharField(max_length=70, editable=False)
