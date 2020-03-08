@@ -15,21 +15,22 @@ def index(request):
     return render(request, 'index.html', context)
 
 
-def createAuthorView(request):
+def create_author(request):
     context = {}
 
     if request.POST:
         form = AuthorCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            displayName = form.cleaned_data.get('displayName')
-            email = form.cleaned_data.get('email')
-            first_name = form.cleaned_data.get('first_name')
-            last_name = form.cleaned_data.get('last_name')
-            github = form.cleaned_data.get('github')
-            raw_password = form.cleaned_data.get('password1')
-            author = authenticate(displayName=displayName, password=raw_password, email=email, first_name=first_name, last_name=last_name, github=github)
-            # login(request, author) # Cannot log in since is_active is default to false, admin has to accept before they can login
+            # displayName = form.cleaned_data.get('displayName')
+            # email = form.cleaned_data.get('email')
+            # first_name = form.cleaned_data.get('first_name')
+            # last_name = form.cleaned_data.get('last_name')
+            # github = form.cleaned_data.get('github')
+            # raw_password = form.cleaned_data.get('password1')
+            # author = authenticate(displayName=displayName, password=raw_password,
+            #                       email=email, first_name=first_name, last_name=last_name, github=github)
+            # # login(request, author) # Cannot log in since is_active is default to false, admin has to accept before they can login
             return redirect(reverse_lazy('home'))
         else:
             context['form'] = form
@@ -40,10 +41,11 @@ def createAuthorView(request):
 
     return render(request, 'register.html', context)
 
-def changeAuthorView(request):
+
+def change_author(request):
     if not request.user.is_authenticated:
         return redirect(reverse_lazy('login'))
-    
+
     context = {}
 
     if request.POST:
@@ -53,7 +55,7 @@ def changeAuthorView(request):
             return redirect(reverse_lazy('home'))
     else:
         form = AuthorChangeForm(
-            initial = {
+            initial={
                 "first_name": request.user.first_name,
                 "last_name": request.user.last_name,
                 "github": request.user.github,
@@ -63,7 +65,8 @@ def changeAuthorView(request):
     context['updateForm'] = form
     return render(request, 'update.html', context)
 
-def loginView(request):
+
+def login_author(request):
     context = {}
 
     user = request.user
@@ -73,9 +76,9 @@ def loginView(request):
     if request.POST:
         form = AuthorAuthenticationForm(request.POST)
         if form.is_valid():
-            displayName = request.POST['displayName']
+            display_name = request.POST['displayName']
             password = request.POST['password']
-            user = authenticate(displayName=displayName, password=password)
+            user = authenticate(displayName=display_name, password=password)
 
             if user:
                 login(request, user)
@@ -86,6 +89,7 @@ def loginView(request):
     context['loginForm'] = form
     return render(request, 'login.html', context)
 
-def logoutView(request):
+
+def logout_author(request):
     logout(request)
     return redirect(reverse_lazy('home'))
