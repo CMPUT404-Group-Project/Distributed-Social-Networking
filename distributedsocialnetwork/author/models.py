@@ -14,32 +14,39 @@ class AuthorManager(BaseUserManager):
         if not email:
             raise ValueError('Email is required.')
 
+        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
+        # user.id = generated_uuid
+        # user.url = generated_uuid
+
         user = self.model(
-            displayName = displayName,
-            first_name = first_name,
-            last_name = last_name,
-            email = self.normalize_email(email)
-            )
+            displayName=displayName,
+            first_name=first_name,
+            last_name=last_name,
+            email=self.normalize_email(email),
+            id=generated_uuid,
+            url=generated_uuid
+        )
 
         user.set_password(password)
+
         user.save(using=self._db)
 
         return user
 
     def create_superuser(self, displayName, first_name, last_name, email, password):
         user = self.create_user(
-            displayName = displayName,
-            password = password,
-            first_name = first_name,
-            last_name = last_name,
-            email = self.normalize_email(email)
-            )
+            displayName=displayName,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=self.normalize_email(email)
+        )
 
         user.is_active = True
         user.is_staff = True
         user.is_superuser = True
         user.save(using=self._db)
-        
+
         return user
 
 
@@ -49,27 +56,23 @@ class Author(AbstractBaseUser):
     # Also see https://docs.djangoproject.com/en/3.0/ref/contrib/auth/
 
     # Required Fields
-    generatedUUID = uuid.uuid4().hex
+    #
     currentHost = 'https://dsnfof.herokuapp.com/'
 
-    id = models.CharField(max_length=32, default=generatedUUID, editable=False, unique=True, primary_key=True)  # Generated
-    host = models.CharField(max_length=30, default=currentHost, editable=False)                                 # Generated
-    url = models.CharField(max_length=70, default=currentHost + 'author/' + str(generatedUUID), editable=False) # Generated
-    displayName = models.CharField(max_length=150, blank=False, unique=True)                                    # Required
-    github = models.CharField(max_length=255, default="", blank=True)                                                       # Optional
-
-    # Other Fields
-    first_name = models.CharField(max_length=30, blank=False)                                                   # Required
-    last_name = models.CharField(max_length=150, blank=False)                                                   # Required
-    email = models.EmailField(max_length=255, blank=False, unique=True)                                         # Required
-
-    is_active = models.BooleanField(default=False)                                                              # Generated
-    is_staff = models.BooleanField(default=False)                                                               # Generated
-    is_superuser = models.BooleanField(default=False)                                                           # Generated
-
-    date_joined = models.DateTimeField(auto_now_add=True)                                                       # Generated
-    last_login = models.DateTimeField(auto_now=True)                                                            # Generated
-
+    id = models.CharField(max_length=70, editable=False,
+                          unique=True, primary_key=True)
+    host = models.CharField(max_length=30, default=currentHost, editable=False)
+    url = models.CharField(max_length=70, editable=False)
+    displayName = models.CharField(max_length=150, blank=False, unique=True)
+    github = models.CharField(max_length=255, default="", blank=True)
+    first_name = models.CharField(max_length=30, blank=False)
+    last_name = models.CharField(max_length=150, blank=False)
+    email = models.EmailField(max_length=255, blank=False, unique=True)
+    is_active = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(auto_now=True)
     username = models.CharField(max_length=1, blank=True, default="")
 
     USERNAME_FIELD = 'displayName'
@@ -86,3 +89,10 @@ class Author(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return self.is_staff
+
+    def save(self, *args, **kwargs):
+        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
+        if(self.id is None) or len(self.id) == 0:
+            self.id = generated_uuid
+            self.url = generated_uuid
+        super(Author, self).save(*args, **kwargs)

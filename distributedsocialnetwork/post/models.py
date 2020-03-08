@@ -7,8 +7,6 @@ from author.models import Author
 
 
 class Post(models.Model):
-    generatedUUID = uuid.uuid4().hex
-
     CONTENT_TYPE_CHOICES = [
         ('text/markdown', 'text/markdown'),
         ('text/plain', 'text/plain'),
@@ -70,6 +68,10 @@ class Comment(models.Model):
     post_id = models.ForeignKey(
         Post, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+
+    class Meta:
+        # Orders comments by the time they were published, in descending order
+        ordering = ['-published']
 
     def __str__(self):
         return str(self.author) + str(self.published)
