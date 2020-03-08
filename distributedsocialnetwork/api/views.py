@@ -2,10 +2,12 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from post.models import Post, Comment
+from author.models import Author
 from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
-
+from friendship.models import Friend, Follow
+from django.shortcuts import get_object_or_404
 # Create your views here.
 
 # ====== /api/posts ======
@@ -441,4 +443,20 @@ class AuthorPosts(APIView):
                 post['categories'] = post['categories'].split(',')
 
         response["posts"] = serialized_posts
+        return Response(response)
+
+# ====== /api/author/<author_id>/friends ======
+
+
+class AuthorFriendsList(APIView):
+
+    def get(self, request, pk):
+        # A GET request returns the list of this Author's current friends
+        # We are using the django-friendship libary that handles these relationships for us
+        response = {"query": "friends"}
+        author = get_object_or_404(Author, pk=pk)
+        friends = Friend.objects.friends(author)
+        response["authors"] = []
+        for friend in friends:
+            response["authors"].append(friend.id)
         return Response(response)
