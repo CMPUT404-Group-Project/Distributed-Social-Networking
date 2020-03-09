@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'distributedsocialnetwork',
     'post',
     'api',
-    'rest_framework'
+    'rest_framework',
+    'friend',
 ]
 
 AUTH_USER_MODEL = 'author.Author'

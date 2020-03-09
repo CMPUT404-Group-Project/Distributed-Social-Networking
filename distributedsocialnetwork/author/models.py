@@ -96,6 +96,7 @@ class Author(AbstractBaseUser):
         if(self.id is None) or len(self.id) == 0:
             self.id = generated_uuid
             self.url = generated_uuid
+        if(self.host is None) or len(self.host) == 0:
             self.host = get_host()
         super(Author, self).save(*args, **kwargs)
 
