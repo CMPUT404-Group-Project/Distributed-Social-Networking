@@ -308,6 +308,7 @@ class AuthUserPosts(APIView):
     # * Return posts that the user's friends of friends have visible to "friends of friends" (TODO: Need friends)
 
     def get(self, request):
+        # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
         response = {'query': "posts"}
         if request.user.is_authenticated:
             # The user is logged in, so we send them all posts they can see
@@ -378,20 +379,23 @@ class AuthUserPosts(APIView):
 class AuthorPosts(APIView):
     # Returns all posts from the specified author that the currently authenticated user can see
     def get(self, request, pk):
+        # The URL contains a fragment of the specified author's id. We have to retrieve the actual author.
+        author = get_object_or_404(Author, id__icontains=pk)
+        author_id = author.id
         response = {"query": "posts"}
         if request.user.is_authenticated:
-            if pk == request.user.id:
+            if author_id == request.user.id:
                 # This is the author, they should be able to see all their posts
-                posts = Post.objects.filter(author=pk)
+                posts = Post.objects.filter(author=author_id)
             else:
                 # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
                 author_public_posts = Post.objects.filter(
-                    author=pk, visibility="PUBLIC")
+                    author=author_id, visibility="PUBLIC")
                 author_private_posts = Post.objects.filter(
-                    author=pk, visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                    author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
                 posts = author_public_posts | author_private_posts
         else:
-            posts = Post.objects.filter(author=pk, visibility="PUBLIC")
+            posts = Post.objects.filter(author=author_id, visibility="PUBLIC")
         response["count"] = len(posts)
         page_size = request.GET.get("size")
         if not page_size:
