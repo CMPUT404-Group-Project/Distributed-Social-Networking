@@ -21,7 +21,9 @@ def create_author(request):
     if request.POST:
         form = AuthorCreationForm(request.POST)
         if form.is_valid():
-            form.save()
+            new_author = form.save(commit=False)
+            new_author.set_id(request)
+            new_author.save()
             # displayName = form.cleaned_data.get('displayName')
             # email = form.cleaned_data.get('email')
             # first_name = form.cleaned_data.get('first_name')

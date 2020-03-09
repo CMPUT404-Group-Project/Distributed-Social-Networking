@@ -14,19 +14,19 @@ class AuthorManager(BaseUserManager):
         if not email:
             raise ValueError('Email is required.')
 
-        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
-        # user.id = generated_uuid
-        # user.url = generated_uuid
+        # generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
+        # # user.id = generated_uuid
+        # # user.url = generated_uuid
 
         user = self.model(
             displayName=displayName,
             first_name=first_name,
             last_name=last_name,
             email=self.normalize_email(email),
-            id=generated_uuid,
-            url=generated_uuid
         )
 
+        # id = generated_uuid,
+        # url = generated_uuid
         user.set_password(password)
 
         user.save(using=self._db)
@@ -59,9 +59,10 @@ class Author(AbstractBaseUser):
     #
     currentHost = 'https://dsnfof.herokuapp.com/'
 
-    id = models.CharField(max_length=70, editable=False,
+    id = models.CharField(max_length=100, editable=False,
                           unique=True, primary_key=True)
-    host = models.CharField(max_length=30, default=currentHost, editable=False)
+    host = models.CharField(
+        max_length=100, default=currentHost, editable=False)
     url = models.CharField(max_length=70, editable=False)
     displayName = models.CharField(max_length=150, blank=False, unique=True)
     github = models.CharField(max_length=255, default="", blank=True)
@@ -90,9 +91,7 @@ class Author(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return self.is_staff
 
-    def save(self, *args, **kwargs):
-        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
-        if(self.id is None) or len(self.id) == 0:
-            self.id = generated_uuid
-            self.url = generated_uuid
-        super(Author, self).save(*args, **kwargs)
+    def set_id(self, request):
+        generated_uuid = request.get_host() + '/author/' + uuid.uuid4().hex
+        self.id = generated_uuid
+        self.url = generated_uuid
