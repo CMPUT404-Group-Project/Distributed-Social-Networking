@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .views import PostDetailView, CommentList, VisiblePosts, AuthUserPosts, AuthorPosts
+from .views import PostDetailView, CommentList, VisiblePosts, AuthUserPosts, AuthorPosts, AuthorFriendsList
 
 
 urlpatterns = [
@@ -24,6 +24,8 @@ urlpatterns = [
     path('posts/<uuid:pk>/comments',
          CommentList.as_view(), name="comments-list"),
     path('author/posts/', AuthUserPosts.as_view(), name="auth-posts"),
-    path('author/<str:pk>/posts', AuthorPosts.as_view(), name="author-posts")
+    path('author/<str:pk>/posts', AuthorPosts.as_view(), name="author-posts"),
+    path('author/<str:pk>/friends',
+         AuthorFriendsList.as_view(), name="author-friends")
 
 ]

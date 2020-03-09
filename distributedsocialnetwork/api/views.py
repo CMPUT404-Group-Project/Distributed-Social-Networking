@@ -2,10 +2,12 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from post.models import Post, Comment
+from author.models import Author
+from friend.models import Friend, Follower
 from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
-
+from django.shortcuts import get_object_or_404
 # Create your views here.
 
 # ====== /api/posts ======
@@ -306,6 +308,7 @@ class AuthUserPosts(APIView):
     # * Return posts that the user's friends of friends have visible to "friends of friends" (TODO: Need friends)
 
     def get(self, request):
+        # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
         response = {'query': "posts"}
         if request.user.is_authenticated:
             # The user is logged in, so we send them all posts they can see
@@ -376,20 +379,23 @@ class AuthUserPosts(APIView):
 class AuthorPosts(APIView):
     # Returns all posts from the specified author that the currently authenticated user can see
     def get(self, request, pk):
+        # The URL contains a fragment of the specified author's id. We have to retrieve the actual author.
+        author = get_object_or_404(Author, id__icontains=pk)
+        author_id = author.id
         response = {"query": "posts"}
         if request.user.is_authenticated:
-            if pk == request.user.id:
+            if author_id == request.user.id:
                 # This is the author, they should be able to see all their posts
-                posts = Post.objects.filter(author=pk)
+                posts = Post.objects.filter(author=author_id)
             else:
                 # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
                 author_public_posts = Post.objects.filter(
-                    author=pk, visibility="PUBLIC")
+                    author=author_id, visibility="PUBLIC")
                 author_private_posts = Post.objects.filter(
-                    author=pk, visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                    author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
                 posts = author_public_posts | author_private_posts
         else:
-            posts = Post.objects.filter(author=pk, visibility="PUBLIC")
+            posts = Post.objects.filter(author=author_id, visibility="PUBLIC")
         response["count"] = len(posts)
         page_size = request.GET.get("size")
         if not page_size:
@@ -442,3 +448,44 @@ class AuthorPosts(APIView):
 
         response["posts"] = serialized_posts
         return Response(response)
+
+# ====== /api/author/<author_id>/friends ======
+
+
+class AuthorFriendsList(APIView):
+
+    def get(self, request, pk):
+        # A GET request returns the list of this Author's current friends
+        # We are using the django-friendship libary that handles these relationships for us
+        response = {"query": "friends"}
+        author = get_object_or_404(Author, id__icontains=pk)
+        friends = Friend.objects.get_friends(author=author)
+        response["authors"] = []
+        for friend in friends:
+            response["authors"].append(friend.id)
+        return Response(response)
+
+    def post(self, request, pk):
+        # A POST containing an array of author ids. Respond which of these are friends of this author via JSON.
+        author = get_object_or_404(Author, id__icontains=pk)
+        if 'application/json' in request.headers["Content-Type"]:
+            try:
+                response = {"query": "friends", "author": author.id}
+                response["authors"] = []
+                for author_id in request.data["authors"]:
+                    if Friend.objects.are_friends(author, Author.objects.get(id=author_id)):
+                        response["authors"].append(author_id)
+                return Response(response, status=status.HTTP_200_OK)
+            except Exception as e:
+                # We can't parse the body of the post request
+                return Response({
+                    "query": "friends",
+                    "success": False,
+                    "message": "Body is incorrectly formatted. " + str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "query": "friends",
+            "success": False,
+            "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+# ====== /api/author/<author1_id>/friends/<author2_id>/ ======

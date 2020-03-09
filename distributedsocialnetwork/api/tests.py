@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
+from friend.models import Friend
 
 
 # Create your tests here.
@@ -14,7 +15,8 @@ from post.models import Post, Comment
 class VisiblePosts(APITestCase):
     def setUp(self):
 
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post 1
@@ -143,7 +145,8 @@ class VisiblePosts(APITestCase):
 
 class PostDetailView(APITestCase):
     def setUp(self):
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post 1
@@ -341,7 +344,8 @@ class PostDetailView(APITestCase):
 
 class CommentList(APITestCase):
     def setUp(self):
-        self.testUserId = uuid.uuid4().hex
+        self.testUserId = 'http://testserver.com/author/' + \
+            str(uuid.uuid4().hex)
         self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
                                                 displayName="Testmaster", github="http://github.com/what")
         # Post
@@ -510,9 +514,9 @@ class AuthUserPosts(APITestCase):
 
     def setUp(self):
         # We will create two authors, and a few different kinds of posts.
-        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
-        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
 
         # First post will be a public post written by author 1
@@ -555,9 +559,9 @@ class AuthorPosts(APITestCase):
 
     def setUp(self):
         # We will create two authors, and a few different kinds of posts.
-        self.author2 = Author.objects.create(id=str(uuid.uuid4().hex),
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
-        self.author1 = Author.objects.create(id=str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
 
         # First post will be a public post written by author 1
@@ -585,7 +589,8 @@ class AuthorPosts(APITestCase):
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
 
     def test_get_list(self):
-        url = '/api/author/' + self.author1.id + '/posts'
+        author_uuid_blurb = self.author1.id[29:]
+        url = '/api/author/' + author_uuid_blurb + '/posts'
         print("url is", url)
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 1 post
@@ -600,3 +605,62 @@ class AuthorPosts(APITestCase):
         response = self.client.get(url, format='json')
         # We should be seeing 3 posts
         self.assertEqual(len(response.data["posts"]), 3)
+
+
+class AuthorFriendsList(APITestCase):
+
+    def setUp(self):
+        # We will create three authors.
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author3 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author3", github="http://github.com/what", email="email3@mail.com")
+
+        # We will set author1 to be friends with author2, and author3 to be friends with author1
+        Friend.objects.add_friend(self.author1, self.author2)
+        Friend.objects.add_friend(self.author1, self.author3)
+
+    def test_get(self):
+        url = '/api/author/' + self.author1.id[29:] + '/friends'
+        response = self.client.get(url, format='json')
+        # We should get a response listing one author
+        self.assertEqual(len(response.data["authors"]), 2)
+        self.assertTrue(self.author2.id in response.data["authors"])
+        # We should get an equivalent response by requesting the friends of author2
+        url = '/api/author/' + self.author2.id[29:] + '/friends'
+        response = self.client.get(url, format='json')
+        self.assertEqual(len(response.data["authors"]), 1)
+        self.assertTrue(self.author1.id in response.data["authors"])
+        # We should get no results if we remove the friend
+        self.assertTrue(Friend.objects.are_friends(self.author2, self.author1))
+        Friend.objects.remove_friend(self.author1, self.author2)
+        response = self.client.get(url, format='json')
+        self.assertEqual(len(response.data["authors"]), 0)
+
+    def test_valid_post(self):
+        url = '/api/author/' + self.author1.id[29:] + '/friends'
+        post_body = {
+            "query": "friends",
+            "author": self.author1.id,
+            "authors": [
+                self.author2.id
+            ]
+        }
+        response = self.client.post(url, post_body, format='json')
+        # We should only get one matching author. It should be author2.
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["authors"]), 1)
+        self.assertTrue(self.author2.id in response.data["authors"])
+        self.assertEqual(len(Friend.objects.get_friends(self.author1)), 2)
+
+    def test_invalid_post(self):
+        url = '/api/author/' + self.author1.id[29:] + '/friends'
+        post_body = {
+            "query": "friends",
+            "author": self.author1.id,
+        }
+        response = self.client.post(url, post_body, format='json')
+        # We should receive a 400 error
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
