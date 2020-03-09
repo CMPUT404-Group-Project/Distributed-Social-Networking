@@ -22,7 +22,7 @@ def create_author(request):
         form = AuthorCreationForm(request.POST)
         if form.is_valid():
             new_author = form.save(commit=False)
-            new_author.set_id(request)
+            new_author.set_hostname_related(request)
             new_author.save()
             # displayName = form.cleaned_data.get('displayName')
             # email = form.cleaned_data.get('email')

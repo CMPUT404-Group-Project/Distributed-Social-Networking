@@ -1,6 +1,6 @@
+import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
-import uuid
 
 
 class AuthorManager(BaseUserManager):
@@ -57,12 +57,11 @@ class Author(AbstractBaseUser):
 
     # Required Fields
     #
-    currentHost = 'https://dsnfof.herokuapp.com/'
 
     id = models.CharField(max_length=100, editable=False,
                           unique=True, primary_key=True)
     host = models.CharField(
-        max_length=100, default=currentHost, editable=False)
+        max_length=100,  editable=False)
     url = models.CharField(max_length=70, editable=False)
     displayName = models.CharField(max_length=150, blank=False, unique=True)
     github = models.CharField(max_length=255, default="", blank=True)
@@ -91,7 +90,12 @@ class Author(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return self.is_staff
 
-    def set_id(self, request):
-        generated_uuid = request.get_host() + '/author/' + uuid.uuid4().hex
+    def set_hostname_related(self, request):
+        generated_uuid = get_host(request) + 'author/' + uuid.uuid4().hex
         self.id = generated_uuid
         self.url = generated_uuid
+        self.host = get_host(request)
+
+
+def get_host(request):
+    return 'http://' + request.get_host() + '/'
