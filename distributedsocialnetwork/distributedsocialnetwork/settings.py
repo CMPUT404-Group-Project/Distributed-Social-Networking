@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'post',
     'api',
     'rest_framework',
-    'friendship',
+    'friend',
 ]
 
 AUTH_USER_MODEL = 'author.Author'

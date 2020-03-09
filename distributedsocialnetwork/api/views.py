@@ -3,10 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from post.models import Post, Comment
 from author.models import Author
+from friend.models import Friend, Follower
 from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
-from friendship.models import Friend, Follow
 from django.shortcuts import get_object_or_404
 # Create your views here.
 
@@ -454,9 +454,34 @@ class AuthorFriendsList(APIView):
         # A GET request returns the list of this Author's current friends
         # We are using the django-friendship libary that handles these relationships for us
         response = {"query": "friends"}
-        author = get_object_or_404(Author, pk=pk)
-        friends = Friend.objects.friends(author)
+        author = get_object_or_404(Author, id__icontains=pk)
+        friends = Friend.objects.get_friends(author=author)
         response["authors"] = []
         for friend in friends:
             response["authors"].append(friend.id)
         return Response(response)
+
+    def post(self, request, pk):
+        # A POST containing an array of author ids. Respond which of these are friends of this author via JSON.
+        author = get_object_or_404(Author, id__icontains=pk)
+        if 'application/json' in request.headers["Content-Type"]:
+            try:
+                response = {"query": "friends", "author": author.id}
+                response["authors"] = []
+                for author_id in request.data["authors"]:
+                    if Friend.objects.are_friends(author, Author.objects.get(id=author_id)):
+                        response["authors"].append(author_id)
+                return Response(response, status=status.HTTP_200_OK)
+            except:
+                # We can't parse the body of the post request
+                return Response({
+                    "query": "friends",
+                    "success": False,
+                    "message": "Body is incorrectly formatted."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "query": "friends",
+            "success": False,
+            "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+# ====== /api/author/<author1_id>/friends/<author2_id>/ ======
