@@ -1,6 +1,7 @@
+import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
-import uuid
+from django.conf import settings
 
 
 class AuthorManager(BaseUserManager):
@@ -14,9 +15,8 @@ class AuthorManager(BaseUserManager):
         if not email:
             raise ValueError('Email is required.')
 
-        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
-        # user.id = generated_uuid
-        # user.url = generated_uuid
+        generated_uuid = get_formatted_id()
+        formated_host = get_host()
 
         user = self.model(
             displayName=displayName,
@@ -24,7 +24,8 @@ class AuthorManager(BaseUserManager):
             last_name=last_name,
             email=self.normalize_email(email),
             id=generated_uuid,
-            url=generated_uuid
+            url=generated_uuid,
+            host=formated_host,
         )
 
         user.set_password(password)
@@ -57,11 +58,11 @@ class Author(AbstractBaseUser):
 
     # Required Fields
     #
-    currentHost = 'https://dsnfof.herokuapp.com/'
 
-    id = models.CharField(max_length=70, editable=False,
+    id = models.CharField(max_length=100, editable=False,
                           unique=True, primary_key=True)
-    host = models.CharField(max_length=30, default=currentHost, editable=False)
+    host = models.CharField(
+        max_length=100, editable=False)
     url = models.CharField(max_length=70, editable=False)
     displayName = models.CharField(max_length=150, blank=False, unique=True)
     github = models.CharField(max_length=255, default="", blank=True)
@@ -91,8 +92,17 @@ class Author(AbstractBaseUser):
         return self.is_staff
 
     def save(self, *args, **kwargs):
-        generated_uuid = 'https://dsnfof.herokuapp.com/' + uuid.uuid4().hex
+        generated_uuid = get_formatted_id()
         if(self.id is None) or len(self.id) == 0:
             self.id = generated_uuid
             self.url = generated_uuid
+            self.host = get_host()
         super(Author, self).save(*args, **kwargs)
+
+
+def get_host():
+    return 'http://' + settings.HOST_NAME + '/'
+
+
+def get_formatted_id():
+    return get_host() + 'author/' + uuid.uuid4().hex

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import django_heroku
+import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -135,6 +136,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# env vars
+
+ENV = environ.Env(
+    HOST_NAME=(str, '127.0.0.1:8000'),
+)
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+HOST_NAME = ENV('HOST_NAME')
 
 # Heroku
 django_heroku.settings(locals())
