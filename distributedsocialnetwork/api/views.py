@@ -472,12 +472,12 @@ class AuthorFriendsList(APIView):
                     if Friend.objects.are_friends(author, Author.objects.get(id=author_id)):
                         response["authors"].append(author_id)
                 return Response(response, status=status.HTTP_200_OK)
-            except:
+            except Exception as e:
                 # We can't parse the body of the post request
                 return Response({
                     "query": "friends",
                     "success": False,
-                    "message": "Body is incorrectly formatted."
+                    "message": "Body is incorrectly formatted. " + str(e)
                 }, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             "query": "friends",
