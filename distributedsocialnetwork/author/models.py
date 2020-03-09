@@ -63,7 +63,7 @@ class Author(AbstractBaseUser):
                           unique=True, primary_key=True)
     host = models.CharField(
         max_length=100, editable=False)
-    url = models.CharField(max_length=70, editable=False)
+    url = models.CharField(max_length=100, editable=False)
     displayName = models.CharField(max_length=150, blank=False, unique=True)
     github = models.CharField(max_length=255, default="", blank=True)
     first_name = models.CharField(max_length=30, blank=False)
