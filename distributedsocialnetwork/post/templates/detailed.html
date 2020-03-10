@@ -1,0 +1,35 @@
+{% extends 'base.html' %} 
+
+{% block title %} {{ post.title }} {% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-2 border-right">
+      <h5>Published By:</h5>
+      <a class="text-right d-block" href="{{post.author_id}}">
+        <h4>{{post.author}}</h4>
+        <small>{{post.published}}</small>
+      </a>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-2 border-right">
+    </div>
+    <div class="col-10 text-center">
+      <h1 style="font-style: italic; font-weight: 600;">
+        {{post.title}}
+      </h1>
+      <h5>{{post.description}}</h5>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-2 border-right">
+    </div>
+    <div class="col-10 mt-4">
+      <p>{{post.content}}</p>
+    </div>
+  </div>
+ 
+  
+ 
+{% endblock %}

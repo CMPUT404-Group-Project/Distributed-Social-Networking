@@ -1,7 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from .forms import PostCreationForm
 from django.conf import settings
+from .models import Post
 # Create your views here.
 
 
@@ -21,10 +22,17 @@ def create_post(request):
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
             new_post.save()
-            return redirect(reverse_lazy('login'))
+            return redirect(new_post.source)
 
     else:
         form = PostCreationForm()
 
     context['postCreationForm'] = form
     return render(request, 'create.html', context)
+
+
+def view_post(request, pk):
+    context = {}
+    context['post'] = get_object_or_404(Post, id=pk)
+    print(context['post'].author_id)
+    return render(request, 'detailed.html', context)
