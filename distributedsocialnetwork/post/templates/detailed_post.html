@@ -1,0 +1,60 @@
+{% extends 'base.html' %} 
+
+{% block title %} {{ post.title }} {% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-2 border-right">
+      <h5>Published By:</h5>
+      <a class="text-right d-block" href="{{post.author_id}}">
+        <h4>{{post.author}}</h4>
+        <small>{{post.published}}</small>
+      </a>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-2 border-right">
+    </div>
+    <div class="col-10 text-center">
+      <h1 style="font-style: italic; font-weight: 600;">
+        {{post.title}}
+      </h1>
+      <h5>{{post.description}}</h5>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-2 border-right">
+    </div>
+    <div class="col-10 my-4">
+      {% for paragraph in post.content %}
+        <p class="px-3">{{paragraph}}</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="row border-top">
+    <div class="col-3 my-2 pl-5">
+      <h2 class="text-danger">Comments</h2>
+    </div>
+  </div>
+
+  {% for comment in comments %}
+  <div class="row my-2">
+    <div class="col-3"></div>
+    {% if forloop.last %}
+      <div class="col-2">
+    {% else %}
+      <div class="col-2 border-bottom ">
+    {% endif %}
+        <p class="mb-0">{{comment.author}}</p>
+        <small>{{comment.published}}</small>
+    </div>
+    {% if forloop.last %}
+    <div class="col-7">
+    {% else %}
+    <div class="col-7 border-bottom">
+    {% endif %}
+      <p>{{comment.comment}}</p>
+    </div>
+  </div>
+  {% endfor %}
+{% endblock %}

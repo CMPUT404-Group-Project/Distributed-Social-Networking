@@ -6,6 +6,7 @@ from .views import (
     change_author,
     login_author,
     logout_author,
+    view_author
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path('update/', change_author, name="update"),
     path('login/', login_author, name="login"),
     path('logout/', logout_author, name="logout"),
+    path('<str:pk>', view_author, name="author")
 ]

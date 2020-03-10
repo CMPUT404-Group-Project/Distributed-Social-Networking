@@ -1,9 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.urls import reverse_lazy
 
 from .forms import AuthorCreationForm, AuthorChangeForm, AuthorAuthenticationForm
 from .models import Author
+from post.models import Post
 
 
 def index(request):
@@ -84,3 +85,10 @@ def login_author(request):
 def logout_author(request):
     logout(request)
     return redirect(reverse_lazy('home'))
+
+
+def view_author(request, pk):
+    context = {}
+    context['author'] = get_object_or_404(Author, id__icontains=pk)
+    context['posts'] = Post.objects.filter(author=context['author'].id)
+    return render(request, 'detailed_author.html', context)
