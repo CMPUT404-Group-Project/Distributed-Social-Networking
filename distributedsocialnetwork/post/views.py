@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from .forms import PostCreationForm
 from django.conf import settings
-from .models import Post
+from .models import Post, Comment
 # Create your views here.
 
 
@@ -34,5 +34,7 @@ def create_post(request):
 def view_post(request, pk):
     context = {}
     context['post'] = get_object_or_404(Post, id=pk)
-    print(context['post'].author_id)
+    context['post'].content = context['post'].content.splitlines()
+    context['comments'] = Comment.objects.filter(post_id=pk)
+    print(dir(context['comments'][0]))
     return render(request, 'detailed.html', context)
