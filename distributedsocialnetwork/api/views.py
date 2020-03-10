@@ -184,6 +184,7 @@ class PostDetailView(APIView):
                 post["author"] = post["author"]["id"]
                 post["id"] = pk
                 post["categories"] = ','.join(post["categories"])
+                post["visibleTo"] = ','.join(post["categories"])
                 serializer = PostSerializer(
                     data=post, context={"request": request})
                 if serializer.is_valid():
@@ -206,12 +207,12 @@ class PostDetailView(APIView):
                     "query": "addPost",
                     "success": False,
                     "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-            except:
+            except Exception as e:
                 # We can't parse the body
                 return Response({
                     "query": "addPost",
                     "success": False,
-                    "message": "Body is incorrectly formatted."
+                    "message": "Body is incorrectly formatted. " + str(e)
                 }, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             "query": "addPost",
@@ -227,6 +228,7 @@ class PostDetailView(APIView):
                 post["author"] = post["author"]["id"]
                 post["id"] = pk
                 post["categories"] = ','.join(post["categories"])
+                post["visibleTo"] = ','.join(post["visibleTo"])
                 post_to_update = Post.objects.filter(id=pk)[0]
                 serializer = PostSerializer(instance=post_to_update, data=post)
                 if serializer.is_valid():
@@ -240,12 +242,12 @@ class PostDetailView(APIView):
                     "query": "updatePost",
                     "success": False,
                     "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-            except:
+            except Exception as e:
                 # We can't parse the body
                 return Response({
                     "query": "updatePost",
                     "success": False,
-                    "message": "Body is incorrectly formatted."
+                    "message": "Body is incorrectly formatted. " + str(e)
                 }, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             "query": "updatePost",
