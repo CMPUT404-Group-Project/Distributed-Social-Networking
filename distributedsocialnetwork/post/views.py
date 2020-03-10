@@ -36,5 +36,4 @@ def view_post(request, pk):
     context['post'] = get_object_or_404(Post, id=pk)
     context['post'].content = context['post'].content.splitlines()
     context['comments'] = Comment.objects.filter(post_id=pk)
-    print(dir(context['comments'][0]))
-    return render(request, 'detailed.html', context)
+    return render(request, 'detailed_post.html', context)
