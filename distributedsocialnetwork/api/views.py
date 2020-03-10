@@ -184,7 +184,7 @@ class PostDetailView(APIView):
                 post["author"] = post["author"]["id"]
                 post["id"] = pk
                 post["categories"] = ','.join(post["categories"])
-                post["visibleTo"] = ','.join(post["categories"])
+                post["visibleTo"] = ','.join(post["visibleTo"])
                 serializer = PostSerializer(
                     data=post, context={"request": request})
                 if serializer.is_valid():
