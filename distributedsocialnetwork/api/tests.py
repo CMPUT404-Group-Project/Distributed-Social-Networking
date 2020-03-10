@@ -342,7 +342,7 @@ class PostDetailView(APITestCase):
         self.assertNotEqual(post.title, "This is the updated title!")
 
     def test_delete_post(self):
-        # This should succeed and return a 201 Created
+        # This should succeed and return a 200 OK
         new_post_id = self.post_id1_string[:-1] + '5'
         url = '/api/posts/' + new_post_id + '/'
         self.client.post(url, self.post_data, format='json')
@@ -355,7 +355,6 @@ class PostDetailView(APITestCase):
         self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
 
     def test_delete_post_invalid_uri(self):
-        # This should succeed and return a 201 Created
         new_post_id = self.post_id1_string[:-1] + '6'
         url = '/api/posts/' + new_post_id + '/'
         response = self.client.delete(url, format='json')
@@ -363,7 +362,6 @@ class PostDetailView(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         # Test that this post isn't in the database
         self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
-
 
 class CommentList(APITestCase):
     def setUp(self):
