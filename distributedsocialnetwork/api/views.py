@@ -412,7 +412,6 @@ class AuthorFriendsList(APIView):
         response = {"query": "friends"}
         author = get_object_or_404(Author, id__icontains=pk)
         friends = Friend.objects.get_friends(author=author)
-        print(friends)
         response["authors"] = []
         for friend in friends:
             response["authors"].append(friend.id)
