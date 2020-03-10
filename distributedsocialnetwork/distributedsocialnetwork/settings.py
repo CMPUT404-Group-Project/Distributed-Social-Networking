@@ -147,6 +147,7 @@ ENV = environ.Env(
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 HOST_NAME = ENV('HOST_NAME')
+FORMATTED_HOST_NAME = 'http://' + HOST_NAME + '/'
 
 # Heroku
 django_heroku.settings(locals())

@@ -16,4 +16,4 @@ class PostCreationForm(ModelForm):
     class Meta:
         model = Post
         fields = ('title', 'description', 'contentType',
-                  'content', 'categories')
+                  'content', 'categories', 'visibility', 'visibleTo')

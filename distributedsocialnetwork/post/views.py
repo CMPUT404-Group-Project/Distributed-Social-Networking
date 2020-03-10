@@ -1,27 +1,28 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
 from django.urls import reverse_lazy
 from .forms import PostCreationForm
+from django.conf import settings
 # Create your views here.
 
 
-def create(request):
+def create_post(request):
     context = {}
 
     user = request.user
-    if user.is_authenticated:
-        return redirect(reverse_lazy('home'))
+    if not user.is_authenticated:
+        return redirect(reverse_lazy('login'))
 
     if request.POST:
         form = PostCreationForm(request.POST)
         if form.is_valid():
-            display_name = request.POST['displayName']
-            password = request.POST['password']
-            user = authenticate(displayName=display_name, password=password)
+            new_post = form.save(commit=False)
+            new_post.author_id = user.id
+            new_post.origin = settings.FORMATTED_HOST_NAME + \
+                'posts/' + str(new_post.id)
+            new_post.source = new_post.origin
+            new_post.save()
+            return redirect(reverse_lazy('login'))
 
-            if user:
-                login(request, user)
-                return redirect(reverse_lazy('home'))
     else:
         form = PostCreationForm()
 

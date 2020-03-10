@@ -102,7 +102,7 @@ class Author(AbstractBaseUser):
 
 
 def get_host():
-    return 'http://' + settings.HOST_NAME + '/'
+    return settings.FORMATTED_HOST_NAME
 
 
 def get_formatted_id():
