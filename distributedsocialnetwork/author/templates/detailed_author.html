@@ -1,0 +1,27 @@
+{% extends 'base.html' %} 
+
+{% block title %} {{ author.displayName }} {% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1>{{author.displayName}}</h1>
+    <small>Last Online: {{author.last_login}}</small>
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-3 text-right">
+    <h2>Posts:</h2>
+  </div>
+  <div class="col-9">
+    {% for post in posts %}
+    <a href="{{ post.source }}">
+      <div class="row-12">
+        <h4>{{ post.title }}</h4>
+        <p class="small">{{ post.description }}</p>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
