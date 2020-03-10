@@ -1,7 +1,7 @@
-import uuid
-import datetime
-from django.db import models
 from author.models import Author
+from django.db import models
+import uuid
+from django.utils import timezone
 
 # Create your models here.
 
@@ -44,11 +44,11 @@ class Post(models.Model):
     def __str__(self):
         return self.title
 
-    def create(self, args, **kwargs):
+    def save(self, *args, **kwargs):
         # This is to ensure that we can insert our own timestamps into the published field
-        if published == None:
-            published = datetime.datetime.now()
-        super(Post, self).save(args, **kwargs)
+        if self.published is None:
+            self.published = timezone.now()
+        super(Post, self).save(*args, **kwargs)
 
 
 class Comment(models.Model):
@@ -76,8 +76,8 @@ class Comment(models.Model):
     def __str__(self):
         return str(self.author) + str(self.published)
 
-    def create(self, args, **kwargs):
+    def save(self, *args, **kwargs):
         # This is to ensure that we can insert our own timestamps into the published field
-        if published == None:
-            published = datetime.datetime.now()
-        super(Comment, self).save(args, **kwargs)
+        if self.published is None:
+            self.published = timezone.now()
+        super(Comment, self).save(*args, **kwargs)

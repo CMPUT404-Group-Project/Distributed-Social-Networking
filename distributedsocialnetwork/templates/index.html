@@ -11,10 +11,12 @@
       <h2>STREAM</h2>
     </div>
     {% for post in posts %}
+      <a href="{{ post.source }}">
       <div class="row-12">
         <h4>{{ post.title }}</h4>
         <p class="small">{{ post.description }}</p>
       </div>
+    </a>
     {% endfor %}
   </div>
   <div class="col-4 container text-right">
@@ -22,10 +24,12 @@
       <h2>FEATURED AUTHORS</h2>
     </div>
     {% for author in authors %}
-    <div class="row-12">
-      <h5>{{ author }}</h5>
-      <p class="small">Last Online: {{ author.last_login }}</p>
-    </div>
+    <a href="{{ author.url }}">
+      <div class="row-12">
+        <h5>{{ author }}</h5>
+        <p class="small">Last Online: {{ author.last_login }}</p>
+      </div>
+    </a>
     {% endfor %}
   </div>
 </div>
