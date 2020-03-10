@@ -10,7 +10,108 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404
 # Create your views here.
 
-# ====== /api/posts ======
+# The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
+# involving lists of posts and comments
+
+
+def post_list_generator(request, query_set):
+    # Given a request, a QuerySet of Posts, and the base URL for which to add page and size parameters,
+    # returns a dict containing the size, page number, link to next, link to previous, and the list of serialized posts
+    page_size = request.GET.get("size") or 50
+    page_num = request.GET.get("page") or 0
+    count = len(query_set)
+    paginator = Paginator(query_set, page_size)
+    page = paginator.get_page(str(int(page_num) + 1))
+    path = request.path
+    if path[-1] == '/':
+        # Django adds trailing backslashes, sometimes inconsistently.
+        path = path[:-1]
+    if page.has_next():
+        next_link = 'http://' + \
+            request.get_host() + path + \
+            '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
+    else:
+        next_link = None
+    if page.has_previous():
+        previous_link = 'http://' + request.get_host() + path + \
+            '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
+    else:
+        previous_link = None
+    post_serializer = PostSerializer(page, many=True)
+    for post in post_serializer.data:
+        # We have to split the categories and visible_to fields
+        if post['visibleTo'] == "":
+            # Not set, so "" by default
+            post['visibleTo'] = []
+        else:
+            post['visibleTo'] = post['visibleTo'].split(',')
+        if post['categories'] == "":
+            post['categories'] = []
+        else:
+            post['categories'] = post['categories'].split(',')
+    return {
+        "page_size": page_size,
+        "page_num": page_num,
+        "count": count,
+        "next": next_link,
+        "previous": previous_link,
+        "posts": post_serializer.data
+    }
+
+
+def nested_comment_list_generator(request, query_set, post_id):
+    # Given a request, a QuerySet of comments, and the post id of the comment set,
+    # returns a dict containing the size, link to all comments, and the list of serialized comments
+    page_size = request.GET.get("size") or 5
+    count = len(query_set)
+    paginator = Paginator(query_set, page_size)
+    page = paginator.get_page(1)
+    next_link = 'http://' + request.get_host() + '/api/posts/' + \
+        post_id + '/comments'
+    comment_serializer = CommentSerializer(page, many=True)
+    for comment in comment_serializer.data:
+        # We don't need to include the post id when dealing with nested comment lists
+        comment.pop('post_id')
+    return {
+        "page_size": page_size,
+        "count": count,
+        "next": next_link,
+        "comments": comment_serializer.data
+    }
+
+
+def comment_list_generator(request, query_set):
+    # Given a request, a QuerySet of comments, and the post id of the comment set,
+    # returns a dict containing the size, page number, next link, previous link, and list of serialized comments
+    page_size = request.GET.get("size") or 50
+    page_num = request.GET.get("page") or 0
+    count = len(query_set)
+    paginator = Paginator(query_set, page_size)
+    page = paginator.get_page(str(int(page_num) + 1))
+    path = request.path
+    if path[-1] == '/':
+        # Django adds trailing backslashes, sometimes inconsistently.
+        path = path[:-1]
+    if page.has_next():
+        next_link = 'http://' + \
+            request.get_host() + path + \
+            '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
+    else:
+        next_link = None
+    if page.has_previous():
+        previous_link = 'http://' + request.get_host() + path + \
+            '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
+    else:
+        previous_link = None
+    comment_serializer = CommentSerializer(page, many=True)
+    return {
+        "page_size": page_size,
+        "page_num": page_num,
+        "count": count,
+        "next": next_link,
+        "previous": previous_link,
+        "comments": comment_serializer.data
+    }
 
 
 class VisiblePosts(APIView):
@@ -18,58 +119,24 @@ class VisiblePosts(APIView):
     # Returns a list of all public posts
     def get(self, request):
         response = {"query": "posts"}
-        posts_all = Post.objects.filter(visibility='PUBLIC')
-        response["count"] = len(posts_all)
-        page_size = request.GET.get("size")
-        if not page_size:
-            page_size = 50
-        response["size"] = page_size
-        page_num = request.GET.get("page")
-        if not page_num:
-            page_num = 0
-        paginator = Paginator(posts_all, page_size)
-        # Paginator assumes first page is page 1, which is not to spec
-        page = paginator.get_page(str(int(page_num) + 1))
-        # We add links to the next and previous page, if they exist
-        if page.has_next():
-            response["next"] = 'http://' + \
-                request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
-        if page.has_previous():
-            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
-
-        # The serializer takes care of a lot of this stuff, but we will need to add
-        # certain things (comments, etc) to each page before we add them to the response
-        serializer = PostSerializer(page, many=True)
-        serialized_posts = serializer.data
-        for post in serialized_posts:
-            post['size'] = page_size
-            comments_all = Comment.objects.filter(post_id=post["id"])
-            post['count'] = len(comments_all)
-            post['next'] = 'http://' + request.get_host() + request.path + \
-                post["id"] + '/comments'
-            comment_paginator = Paginator(comments_all, page_size)
-            comment_page = comment_paginator.get_page(1)
-            serialized_comments = CommentSerializer(
-                comment_page, many=True).data
-            for comment in serialized_comments:
-                comment.pop('post_id')
-            post['comments'] = serialized_comments
-
-            # Both visibleTo and categories are charfields
-            # We split on ',' for these
-            if post['visibleTo'] == "":
-                # Not set, so "" by default
-                post['visibleTo'] = []
-            else:
-                post['visibleTo'] = post['visibleTo'].split(',')
-            if post['categories'] == "":
-                post['categories'] = []
-            else:
-                post['categories'] = post['categories'].split(',')
-
-        response["posts"] = serialized_posts
+        post_query_set = Post.objects.filter(visibility="PUBLIC")
+        post_list_dict = post_list_generator(request, post_query_set)
+        # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
+        response["count"] = post_list_dict["count"]
+        response["size"] = post_list_dict["page_size"]
+        if post_list_dict["next"]:
+            response["next"] = post_list_dict["next"]
+        if post_list_dict["previous"]:
+            response["previous"] = post_list_dict["previous"]
+        # We add nested comment lists for all posts
+        for post in post_list_dict["posts"]:
+            comment_query_set = Comment.objects.filter(post_id=post["id"])
+            comment_list_dict = nested_comment_list_generator(
+                request, comment_query_set, post["id"])
+            post["count"] = comment_list_dict["count"]
+            post["next"] = comment_list_dict["next"]
+            post["comments"] = comment_list_dict["comments"]
+        response["posts"] = post_list_dict["posts"]
         return Response(response)
 
 # ====== /api/posts/<post_id> ======
@@ -80,58 +147,24 @@ class PostDetailView(APIView):
     # The example article says this needs to be a list of one.
     def get(self, request, pk):
         response = {"query": "posts"}
-        posts_all = Post.objects.filter(id=pk)
-        response["count"] = len(posts_all)
-        page_size = request.GET.get("size")
-        if not page_size:
-            page_size = 50
-        response["size"] = page_size
-        page_num = request.GET.get("page")
-        if not page_num:
-            page_num = 0
-        paginator = Paginator(posts_all, page_size)
-        # Paginator assumes first page is page 1, which is not to spec
-        page = paginator.get_page(str(int(page_num) + 1))
-        # We add links to the next and previous page, if they exist
-        if page.has_next():
-            response["next"] = 'http://' + \
-                request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
-        if page.has_previous():
-            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
-
-        # The serializer takes care of a lot of this stuff, but we will need to add
-        # certain things (comments, etc) to each post before we add them to the response
-        serializer = PostSerializer(page, many=True)
-        serialized_posts = serializer.data
-        for post in serialized_posts:
-            post['size'] = page_size
-            comments_all = Comment.objects.filter(post_id=post["id"])
-            post['count'] = len(comments_all)
-            post['next'] = 'http://' + request.get_host() + request.path + \
-                'comments'
-            comment_paginator = Paginator(comments_all, page_size)
-            comment_page = comment_paginator.get_page(1)
-            serialized_comments = CommentSerializer(
-                comment_page, many=True).data
-            for comment in serialized_comments:
-                comment.pop('post_id')
-            post['comments'] = serialized_comments
-
-            # Both visibleTo and categories are charfields
-            # We split on ',' for these
-            if post['visibleTo'] == "":
-                # Not set, so "" by default
-                post['visibleTo'] = []
-            else:
-                post['visibleTo'] = post['visibleTo'].split(',')
-            if post['categories'] == "":
-                post['categories'] = []
-            else:
-                post['categories'] = post['categories'].split(',')
-
-        response["posts"] = serialized_posts
+        post_query_set = Post.objects.filter(id=pk)
+        post_list_dict = post_list_generator(request, post_query_set)
+        # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
+        response["count"] = post_list_dict["count"]
+        response["size"] = post_list_dict["page_size"]
+        if post_list_dict["next"]:
+            response["next"] = post_list_dict["next"]
+        if post_list_dict["previous"]:
+            response["previous"] = post_list_dict["previous"]
+        # We add nested comment lists for all posts
+        for post in post_list_dict["posts"]:
+            comment_query_set = Comment.objects.filter(post_id=post["id"])
+            comment_list_dict = nested_comment_list_generator(
+                request, comment_query_set, post["id"])
+            post["count"] = comment_list_dict["count"]
+            post["next"] = comment_list_dict["next"]
+            post["comments"] = comment_list_dict["comments"]
+        response["posts"] = post_list_dict["posts"]
         return Response(response)
 
     def post(self, request, pk):
@@ -225,31 +258,15 @@ class PostDetailView(APIView):
 class CommentList(APIView):
     def get(self, request, pk):
         response = {"query": "comments"}
-        comments_all = Comment.objects.filter(post_id=pk)
-        response["count"] = len(comments_all)
-        page_size = request.GET.get("size")
-        if not page_size:
-            page_size = 50
-        response["size"] = page_size
-        page_num = request.GET.get("page")
-        if not page_num:
-            page_num = 0
-        paginator = Paginator(comments_all, page_size)
-        # Paginator assumes first page is page 1, which is not to spec
-        page = paginator.get_page(str(int(page_num) + 1))
-        # We add links to the next and previous page, if they exist
-        if page.has_next():
-            response["next"] = 'http://' + \
-                request.get_host() + request.path + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
-        if page.has_previous():
-            response["previous"] = 'http://' + request.get_host() + request.path + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
-        serializer = CommentSerializer(page, many=True)
-        serialized_comments = serializer.data
-        for comment in serialized_comments:
-            comment.pop('post_id')
-        response["comments"] = serialized_comments
+        comment_query_set = Comment.objects.filter(post_id=pk)
+        comment_list_dict = comment_list_generator(request, comment_query_set)
+        response["count"] = comment_list_dict["count"]
+        response["size"] = comment_list_dict["page_size"]
+        if comment_list_dict["next"]:
+            response["next"] = comment_list_dict["next"]
+        if comment_list_dict["previous"]:
+            response["previous"] = comment_list_dict["previous"]
+        response["comments"] = comment_list_dict["comments"]
         return Response(response)
 
     def post(self, request, pk):
@@ -316,61 +333,27 @@ class AuthUserPosts(APIView):
             user_posts = Post.objects.filter(author=request.user)
             privated_posts = Post.objects.filter(
                 visibility="PRIVATE", visibleTo__icontains=request.user.id)
-            posts = public_posts | user_posts | privated_posts
+            post_query_set = public_posts | user_posts | privated_posts
         else:
             # They are not logged in and authenticated. So
-            posts = Post.objects.filter(visibility="PUBLIC")
-        response["count"] = len(posts)
-        page_size = request.GET.get("size")
-        if not page_size:
-            page_size = 50
-        response["size"] = page_size
-        page_num = request.GET.get("page")
-        if not page_num:
-            page_num = 0
-        paginator = Paginator(posts, page_size)
-        # Paginator assumes first page is page 1, which is not to spec
-        page = paginator.get_page(str(int(page_num) + 1))
-        # We add links to the next and previous page, if they exist
-        if page.has_next():
-            response["next"] = 'http://' + \
-                request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
-        if page.has_previous():
-            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
-
-        # The serializer takes care of a lot of this stuff, but we will need to add
-        # certain things (comments, etc) to each page before we add them to the response
-        serializer = PostSerializer(page, many=True)
-        serialized_posts = serializer.data
-        for post in serialized_posts:
-            post['size'] = page_size
-            comments_all = Comment.objects.filter(post_id=post["id"])
-            post['count'] = len(comments_all)
-            post['next'] = 'http://' + request.get_host() + reverse('public-posts') + \
-                post["id"] + '/comments'
-            comment_paginator = Paginator(comments_all, page_size)
-            comment_page = comment_paginator.get_page(1)
-            serialized_comments = CommentSerializer(
-                comment_page, many=True).data
-            for comment in serialized_comments:
-                comment.pop('post_id')
-            post['comments'] = serialized_comments
-
-            # Both visibleTo and categories are charfields
-            # We split on ',' for these
-            if post['visibleTo'] == "":
-                # Not set, so "" by default
-                post['visibleTo'] = []
-            else:
-                post['visibleTo'] = post['visibleTo'].split(',')
-            if post['categories'] == "":
-                post['categories'] = []
-            else:
-                post['categories'] = post['categories'].split(',')
-
-        response["posts"] = serialized_posts
+            post_query_set = Post.objects.filter(visibility="PUBLIC")
+        post_list_dict = post_list_generator(request, post_query_set)
+        # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
+        response["count"] = post_list_dict["count"]
+        response["size"] = post_list_dict["page_size"]
+        if post_list_dict["next"]:
+            response["next"] = post_list_dict["next"]
+        if post_list_dict["previous"]:
+            response["previous"] = post_list_dict["previous"]
+        # We add nested comment lists for all posts
+        for post in post_list_dict["posts"]:
+            comment_query_set = Comment.objects.filter(post_id=post["id"])
+            comment_list_dict = nested_comment_list_generator(
+                request, comment_query_set, post["id"])
+            post["count"] = comment_list_dict["count"]
+            post["next"] = comment_list_dict["next"]
+            post["comments"] = comment_list_dict["comments"]
+        response["posts"] = post_list_dict["posts"]
         return Response(response)
 
 # ====== /api/author/posts/<author_id>/posts ======
@@ -386,67 +369,34 @@ class AuthorPosts(APIView):
         if request.user.is_authenticated:
             if author_id == request.user.id:
                 # This is the author, they should be able to see all their posts
-                posts = Post.objects.filter(author=author_id)
+                post_query_set = Post.objects.filter(author=author_id)
             else:
                 # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
                 author_public_posts = Post.objects.filter(
                     author=author_id, visibility="PUBLIC")
                 author_private_posts = Post.objects.filter(
                     author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
-                posts = author_public_posts | author_private_posts
+                post_query_set = author_public_posts | author_private_posts
         else:
-            posts = Post.objects.filter(author=author_id, visibility="PUBLIC")
-        response["count"] = len(posts)
-        page_size = request.GET.get("size")
-        if not page_size:
-            page_size = 50
-        response["size"] = page_size
-        page_num = request.GET.get("page")
-        if not page_num:
-            page_num = 0
-        paginator = Paginator(posts, page_size)
-        # Paginator assumes first page is page 1, which is not to spec
-        page = paginator.get_page(str(int(page_num) + 1))
-        # We add links to the next and previous page, if they exist
-        if page.has_next():
-            response["next"] = 'http://' + \
-                request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) + 1)
-        if page.has_previous():
-            response["previous"] = 'http://' + request.get_host() + request.path[:-1] + \
-                '?size=' + str(page_size) + '&page=' + str(int(page_num) - 1)
-
-        # The serializer takes care of a lot of this stuff, but we will need to add
-        # certain things (comments, etc) to each page before we add them to the response
-        serializer = PostSerializer(page, many=True)
-        serialized_posts = serializer.data
-        for post in serialized_posts:
-            post['size'] = page_size
-            comments_all = Comment.objects.filter(post_id=post["id"])
-            post['count'] = len(comments_all)
-            post['next'] = 'http://' + request.get_host() + reverse('public-posts') + \
-                post["id"] + '/comments'
-            comment_paginator = Paginator(comments_all, page_size)
-            comment_page = comment_paginator.get_page(1)
-            serialized_comments = CommentSerializer(
-                comment_page, many=True).data
-            for comment in serialized_comments:
-                comment.pop('post_id')
-            post['comments'] = serialized_comments
-
-            # Both visibleTo and categories are charfields
-            # We split on ',' for these
-            if post['visibleTo'] == "":
-                # Not set, so "" by default
-                post['visibleTo'] = []
-            else:
-                post['visibleTo'] = post['visibleTo'].split(',')
-            if post['categories'] == "":
-                post['categories'] = []
-            else:
-                post['categories'] = post['categories'].split(',')
-
-        response["posts"] = serialized_posts
+            post_query_set = Post.objects.filter(
+                author=author_id, visibility="PUBLIC")
+        post_list_dict = post_list_generator(request, post_query_set)
+        # Returns [page_size, page_num, count, next, previous, posts]
+        response["count"] = post_list_dict["count"]
+        response["size"] = post_list_dict["page_size"]
+        if post_list_dict["next"]:
+            response["next"] = post_list_dict["next"]
+        if post_list_dict["previous"]:
+            response["previous"] = post_list_dict["previous"]
+        # We add nested comment lists for all posts
+        for post in post_list_dict["posts"]:
+            comment_query_set = Comment.objects.filter(post_id=post["id"])
+            comment_list_dict = nested_comment_list_generator(
+                request, comment_query_set, post["id"])
+            post["count"] = comment_list_dict["count"]
+            post["next"] = comment_list_dict["next"]
+            post["comments"] = comment_list_dict["comments"]
+        response["posts"] = post_list_dict["posts"]
         return Response(response)
 
 # ====== /api/author/<author_id>/friends ======
