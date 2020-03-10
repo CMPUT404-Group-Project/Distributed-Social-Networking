@@ -8,6 +8,7 @@ from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
+import urllib
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -441,3 +442,17 @@ class AuthorFriendsList(APIView):
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
 # ====== /api/author/<author1_id>/friends/<author2_id>/ ======
+
+
+class AreAuthorsFriends(APIView):
+    # GET returns a list of both authors if they are friends, and none if they are not
+    def get(self, request, pk, service, author2_id):
+        other_user_id = "http://" + service + '/author/' + author2_id
+        response = {"query": "friends"}
+        author1 = get_object_or_404(Author, id__icontains=pk)
+        author2 = get_object_or_404(Author, id=other_user_id)
+        response["authors"] = [author1.id, author2.id]
+        response["friends"] = False
+        if Friend.objects.are_friends(author1, author2):
+            response["friends"] = True
+        return Response(response, status=status.HTTP_200_OK)
