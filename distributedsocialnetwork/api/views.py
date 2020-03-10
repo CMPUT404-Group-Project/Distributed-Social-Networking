@@ -259,7 +259,7 @@ class PostDetailView(APIView):
         try:
             deleted = Post.objects.filter(id=pk).delete()
             deleted_dict = deleted[1]
-            deleted_comments = deleted_dict['post.Post']
+            deleted_comments = deleted_dict['post.Comment']
             return Response({
                 "query": "deletePost",
                 "success": True, 
