@@ -21,7 +21,7 @@ def create_author(request):
     if request.POST:
         form = AuthorCreationForm(request.POST)
         if form.is_valid():
-            new_author = form.save()
+            form.save()
             # displayName = form.cleaned_data.get('displayName')
             # email = form.cleaned_data.get('email')
             # first_name = form.cleaned_data.get('first_name')
