@@ -254,6 +254,26 @@ class PostDetailView(APIView):
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request, pk):
+        #Deleting the post that is at this URI and any associated comments.
+        try:
+            deleted = Post.objects.filter(id=pk).delete()
+            deleted_dict = deleted[1]
+            deleted_comments = deleted_dict['post.Post']
+            return Response({
+                "query": "deletePost",
+                "success": True, 
+                "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
+                })
+        except Exception:
+            #Invalid post URI
+            return Response({
+                "query": "deletePost",
+                "success": False,
+                "message": "No post with id " + str(pk) + " exists."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+
 # ====== /api/posts/<post_id>/comments ======
 
 
