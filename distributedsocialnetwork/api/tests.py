@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
-from friend.models import Friend
+from friend.models import Friend, Follower
 
 
 # Create your tests here.
@@ -685,3 +685,93 @@ class AuthorFriendsList(APITestCase):
         response = self.client.post(url, post_body, format='json')
         # We should receive a 400 error
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class FriendRequest(APITestCase):
+    def setUp(self):
+        # We will create two authors.
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+
+    def test_post_valid_format(self):
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.author1.id,
+                "host": self.author1.host,
+                "displayName": self.author1.displayName,
+                "url": self.author1.url
+            },
+            "friend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        url = '/api/friendrequest'
+        response = self.client.post(url, post_body, format='json')
+        # Assert we got a 200 OK, and that it was a success
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        # Assert that it is in the db
+        self.assertTrue(Follower.objects.is_following(
+            self.author1, self.author2))
+        # if we send it again, it should return a 400
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "has already sent a friend request to"))
+        # If we make them friends, it should return a 400
+        Friend.objects.add_friend(self.author1, self.author2)
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "is already friends with"))
+
+    def test_post_invalid_format(self):
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.author1.id,
+                "host": self.author1.host,
+                "displayName": self.author1.displayName,
+                "url": self.author1.url
+            },
+            "fiend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        url = '/api/friendrequest'
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "incorrectly formatted"))
+        # Now we send it with a friend who does not exist
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": "hey",
+                "host": "whaddup",
+                "displayName": "sup",
+                "url": "url.com"
+            },
+            "friend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "incorrectly formatted"))
