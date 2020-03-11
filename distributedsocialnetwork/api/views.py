@@ -8,6 +8,7 @@ from post.serializers import PostSerializer, CommentSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
+import urllib
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -184,7 +185,7 @@ class PostDetailView(APIView):
                 post["author"] = post["author"]["id"]
                 post["id"] = pk
                 post["categories"] = ','.join(post["categories"])
-                post["visibleTo"] = ','.join(post["categories"])
+                post["visibleTo"] = ','.join(post["visibleTo"])
                 serializer = PostSerializer(
                     data=post, context={"request": request})
                 if serializer.is_valid():
@@ -253,6 +254,26 @@ class PostDetailView(APIView):
             "query": "updatePost",
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        #Deleting the post that is at this URI and any associated comments.
+        try:
+            deleted = Post.objects.filter(id=pk).delete()
+            deleted_dict = deleted[1]
+            deleted_comments = deleted_dict['post.Comment']
+            return Response({
+                "query": "deletePost",
+                "success": True, 
+                "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
+                })
+        except Exception:
+            #Invalid post URI
+            return Response({
+                "query": "deletePost",
+                "success": False,
+                "message": "No post with id " + str(pk) + " exists."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
 
 # ====== /api/posts/<post_id>/comments ======
 
@@ -441,3 +462,60 @@ class AuthorFriendsList(APIView):
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
 # ====== /api/author/<author1_id>/friends/<author2_id>/ ======
+
+
+class AreAuthorsFriends(APIView):
+    # GET returns a list of both authors if they are friends, and none if they are not
+    def get(self, request, pk, service, author2_id):
+        other_user_id = "http://" + service + '/author/' + author2_id
+        response = {"query": "friends"}
+        author1 = get_object_or_404(Author, id__icontains=pk)
+        author2 = get_object_or_404(Author, id=other_user_id)
+        response["authors"] = [author1.id, author2.id]
+        response["friends"] = False
+        if Friend.objects.are_friends(author1, author2):
+            response["friends"] = True
+        return Response(response, status=status.HTTP_200_OK)
+
+
+# ====== /api/friendrequest ======
+class FriendRequest(APIView):
+    def post(self, request):
+        # We want to send a friend request from the "author" to the "friend"
+        if 'application/json' in request.headers["Content-Type"]:
+            try:
+                author = get_object_or_404(
+                    Author, id=request.data["author"]["id"])
+                friend = get_object_or_404(
+                    Author, id=request.data["friend"]["id"])
+                if not Friend.objects.are_friends(author, friend):
+                    # If they are already friends, we don't need to send a friend request
+                    if not Follower.objects.is_following(author, friend):
+                        # If a friend request has been sent then we don't need to send another
+                        Follower.objects.add_follower(author, friend)
+                        return Response({
+                            "query": "friendrequest",
+                            "success": True,
+                            "message": "Friend request to %s has been sent" % friend.displayName
+                        }, status=status.HTTP_200_OK)
+                    return Response({
+                        "query": "friendrequest",
+                        "success": False,
+                        "message": "%s has already sent a friend request to %s" % (author.displayName, friend.displayName)
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "query": "friendrequest",
+                    "success": False,
+                    "message": "%s is already friends with %s" % (author.displayName, friend.displayName)
+                }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                # We can't parse the body of this post request
+                return Response({
+                    "query": "friendrequest",
+                    "success": False,
+                    "message": "Body is incorrectly formatted. " + str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "query": "friendrequest",
+            "success": False,
+            "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)

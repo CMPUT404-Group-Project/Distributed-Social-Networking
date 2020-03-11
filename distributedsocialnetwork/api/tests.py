@@ -1,13 +1,14 @@
 import uuid
 import datetime
 import pytz
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
-from friend.models import Friend
-
+from friend.models import Friend, Follower
+import urllib
 
 # Create your tests here.
 
@@ -71,7 +72,7 @@ class VisiblePosts(APITestCase):
         self.content3 = "Content of the first test case post"
         self.author3 = self.testAuthor
         self.categories3 = ""
-        self.published3 = datetime.datetime.now()
+        self.published3 = timezone.now()
         self.visibility3 = "PRIVATE"
         self.visibleTo3 = "jake,thatotherguy"
         self.unlisted3 = False
@@ -326,7 +327,7 @@ class PostDetailView(APITestCase):
                 "contentType": "text/markdown",
                 "content": "Wow what an amazing and insightful post this is",
                 "categories": ["first", "second"],
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "visibility": "PUBLIC",
                 "visibleTo": "",
                 "unlisted": False
@@ -341,6 +342,27 @@ class PostDetailView(APITestCase):
         post = Post.objects.filter(id=self.post_id1)[0]
         self.assertNotEqual(post.title, "This is the updated title!")
 
+    def test_delete_post(self):
+        # This should succeed and return a 200 OK
+        new_post_id = self.post_id1_string[:-1] + '5'
+        url = '/api/posts/' + new_post_id + '/'
+        self.client.post(url, self.post_data, format='json')
+        # Test that this new post is in the database
+        self.assertEqual(Post.objects.filter(id=new_post_id).count(), 1)
+        response = self.client.delete(url, format='json')
+        # Test to ensure that this post has been deleted
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Test that this new post is no longer in the database
+        self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
+
+    def test_delete_post_invalid_uri(self):
+        new_post_id = self.post_id1_string[:-1] + '6'
+        url = '/api/posts/' + new_post_id + '/'
+        response = self.client.delete(url, format='json')
+        # This post doesn't exist, so we should get a 404 back
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        # Test that this post isn't in the database
+        self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
 
 class CommentList(APITestCase):
     def setUp(self):
@@ -448,7 +470,7 @@ class CommentList(APITestCase):
                     },
                 "comment": "Sick Olde English",
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -476,7 +498,7 @@ class CommentList(APITestCase):
                     },
                 "comment": "Sick Olde English",
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -500,7 +522,7 @@ class CommentList(APITestCase):
                         "github": self.testAuthor.github
                     },
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -591,7 +613,6 @@ class AuthorPosts(APITestCase):
     def test_get_list(self):
         author_uuid_blurb = self.author1.id[29:]
         url = '/api/author/' + author_uuid_blurb + '/posts'
-        print("url is", url)
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 1 post
         self.assertEqual(len(response.data["posts"]), 1)
@@ -664,3 +685,137 @@ class AuthorFriendsList(APITestCase):
         response = self.client.post(url, post_body, format='json')
         # We should receive a 400 error
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AreAuthorsFriends(APITestCase):
+    def setUp(self):
+        # We will create three authors.
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author3 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author3", github="http://github.com/what", email="email3@mail.com")
+        # We will make author 1 and 2 friends.
+        Friend.objects.add_friend(self.author1, self.author2)
+
+    def test_get(self):
+        # We query for authors 1 and 2. They should be friends.
+        safe_author2 = urllib.parse.quote(
+            self.author2.id[7:], safe='~()*!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_author2
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.author1.id in response.data["authors"])
+        self.assertTrue(self.author2.id in response.data["authors"])
+        self.assertTrue(response.data["friends"])
+        # We test for authors 1 and 3. They are not friends
+        safe_author3 = urllib.parse.quote(
+            self.author3.id[7:], safe='~()*!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_author3
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.author1.id in response.data["authors"])
+        self.assertTrue(self.author3.id in response.data["authors"])
+        self.assertFalse(response.data["friends"])
+
+    def test_author_not_found(self):
+        # If an author is not found we should receive a 404
+        safe_fakeauthor = urllib.parse.quote(
+            'fakeservice.com/author/fakeuser/', safe='~() *!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_fakeauthor
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class FriendRequest(APITestCase):
+    def setUp(self):
+        # We will create two authors.
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+
+    def test_post_valid_format(self):
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.author1.id,
+                "host": self.author1.host,
+                "displayName": self.author1.displayName,
+                "url": self.author1.url
+            },
+            "friend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        url = '/api/friendrequest'
+        response = self.client.post(url, post_body, format='json')
+        # Assert we got a 200 OK, and that it was a success
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        # Assert that it is in the db
+        self.assertTrue(Follower.objects.is_following(
+            self.author1, self.author2))
+        # if we send it again, it should return a 400
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "has already sent a friend request to"))
+        # If we make them friends, it should return a 400
+        Friend.objects.add_friend(self.author1, self.author2)
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "is already friends with"))
+
+    def test_post_invalid_format(self):
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.author1.id,
+                "host": self.author1.host,
+                "displayName": self.author1.displayName,
+                "url": self.author1.url
+            },
+            "fiend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        url = '/api/friendrequest'
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "incorrectly formatted"))
+        # Now we send it with a friend who does not exist
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": "hey",
+                "host": "whaddup",
+                "displayName": "sup",
+                "url": "url.com"
+            },
+            "friend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "incorrectly formatted"))

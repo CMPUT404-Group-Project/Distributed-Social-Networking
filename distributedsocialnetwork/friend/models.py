@@ -27,21 +27,17 @@ class FollowerManager(models.Manager):
             authors.append(connection.other)
         return authors
 
-    def add_follower(self, current_author, other_author):
+    def add_follower(self, author_following, author_to_follow):
         # Add a new follower (unrequited friend requests)
+        # Author_following sending a friend request to author_to_follow
         Follower.objects.create(
-            current=other_author, other=current_author)
-
-    def add_following(self, current_author, other_author):
-        # Add a new author to follow (friend request sent)
-        Follower.objects.create(
-            current=current_author, other=other_author)
+            current=author_following, other=author_to_follow)
 
     def is_following(self, current_author, other_author):
         # Returns bool for if current author is following the other author
         return len(Follower.objects.filter(current=current_author, other=other_author)) == 1
 
-    def is_followed(self, current_author, other_author):
+    def is_followed_by(self, current_author, other_author):
         # Returns bool for iff current author is being followed by the other author
         return len(Follower.objects.filter(current=other_author, other=current_author)) == 1
 
