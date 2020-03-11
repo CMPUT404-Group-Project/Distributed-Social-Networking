@@ -94,7 +94,7 @@ class FriendManager(models.Manager):
         friends = Friend.objects.get_friends(author)
         foaf_set = set(friends)
         for friend in friends:
-            friends_of_friends = set(Friend.objects.get(friend))
+            friends_of_friends = set(Friend.objects.get_friends(friend))
             foaf_set = foaf_set | friends_of_friends
         return list(foaf_set)
 

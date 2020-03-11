@@ -343,8 +343,8 @@ class AuthUserPosts(APIView):
     # * Return the public posts on this server
     # * Return the user's posts
     # * Return privated posts where the user is in the "visibleTo" list
-    # * Return posts that the user's friends/people have marked as "visible to friends" (TODO: Need friends)
-    # * Return posts that the user's friends of friends have visible to "friends of friends" (TODO: Need friends)
+    # * Return posts that the user's friends/people have marked as "visible to friends"
+    # * Return posts that the user's friends of friends have visible to "friends of friends"
 
     def get(self, request):
         # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
@@ -355,7 +355,8 @@ class AuthUserPosts(APIView):
             user_posts = Post.objects.filter(author=request.user)
             privated_posts = Post.objects.filter(
                 visibility="PRIVATE", visibleTo__icontains=request.user.id)
-            serveronly_posts = Post.objects.filter(visibility="SERVERONLY")
+            serveronly_posts = Post.objects.filter(
+                visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
             friend_posts = Post.objects.filter(
                 visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
             foaf_posts = Post.objects.filter(
@@ -404,6 +405,16 @@ class AuthorPosts(APIView):
                 author_private_posts = Post.objects.filter(
                     author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
                 post_query_set = author_public_posts | author_private_posts
+                if Friend.objects.are_friends(request.user, author):
+                    # We can send them a few things
+                    serveronly_posts = Post.objects.filter(
+                        visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
+                    friend_posts = Post.objects.filter(
+                        visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
+                    foaf_posts = Post.objects.filter(
+                        visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
+                    post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
+
         else:
             post_query_set = Post.objects.filter(
                 author=author_id, visibility="PUBLIC")
