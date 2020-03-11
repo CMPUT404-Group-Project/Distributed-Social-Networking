@@ -1,13 +1,14 @@
 import uuid
 import datetime
 import pytz
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
 from friend.models import Friend, Follower
-
+import urllib
 
 # Create your tests here.
 
@@ -71,7 +72,7 @@ class VisiblePosts(APITestCase):
         self.content3 = "Content of the first test case post"
         self.author3 = self.testAuthor
         self.categories3 = ""
-        self.published3 = datetime.datetime.now()
+        self.published3 = timezone.now()
         self.visibility3 = "PRIVATE"
         self.visibleTo3 = "jake,thatotherguy"
         self.unlisted3 = False
@@ -326,7 +327,7 @@ class PostDetailView(APITestCase):
                 "contentType": "text/markdown",
                 "content": "Wow what an amazing and insightful post this is",
                 "categories": ["first", "second"],
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "visibility": "PUBLIC",
                 "visibleTo": "",
                 "unlisted": False
@@ -469,7 +470,7 @@ class CommentList(APITestCase):
                     },
                 "comment": "Sick Olde English",
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -497,7 +498,7 @@ class CommentList(APITestCase):
                     },
                 "comment": "Sick Olde English",
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -521,7 +522,7 @@ class CommentList(APITestCase):
                         "github": self.testAuthor.github
                     },
                 "contentType": "text/markdown",
-                "published": "2015-03-09T13:07:04+00:00",
+                "published": timezone.now(),
                 "id": comment_id_string
             }
         }
@@ -612,7 +613,6 @@ class AuthorPosts(APITestCase):
     def test_get_list(self):
         author_uuid_blurb = self.author1.id[29:]
         url = '/api/author/' + author_uuid_blurb + '/posts'
-        print("url is", url)
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 1 post
         self.assertEqual(len(response.data["posts"]), 1)
@@ -685,6 +685,50 @@ class AuthorFriendsList(APITestCase):
         response = self.client.post(url, post_body, format='json')
         # We should receive a 400 error
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AreAuthorsFriends(APITestCase):
+    def setUp(self):
+        # We will create three authors.
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author3 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author3", github="http://github.com/what", email="email3@mail.com")
+        # We will make author 1 and 2 friends.
+        Friend.objects.add_friend(self.author1, self.author2)
+
+    def test_get(self):
+        # We query for authors 1 and 2. They should be friends.
+        safe_author2 = urllib.parse.quote(
+            self.author2.id[7:], safe='~()*!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_author2
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.author1.id in response.data["authors"])
+        self.assertTrue(self.author2.id in response.data["authors"])
+        self.assertTrue(response.data["friends"])
+        # We test for authors 1 and 3. They are not friends
+        safe_author3 = urllib.parse.quote(
+            self.author3.id[7:], safe='~()*!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_author3
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.author1.id in response.data["authors"])
+        self.assertTrue(self.author3.id in response.data["authors"])
+        self.assertFalse(response.data["friends"])
+
+    def test_author_not_found(self):
+        # If an author is not found we should receive a 404
+        safe_fakeauthor = urllib.parse.quote(
+            'fakeservice.com/author/fakeuser/', safe='~() *!.\'')
+        url = '/api/author/' + \
+            self.author1.id[29:] + '/friends/' + safe_fakeauthor
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class FriendRequest(APITestCase):
