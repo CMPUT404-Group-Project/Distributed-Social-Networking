@@ -88,6 +88,16 @@ class FriendManager(models.Manager):
         friend_object = Friend.objects.get(current=current_author)
         return (other_author in friend_object.other.all())
 
+    def get_foaf(self, author):
+        # Return a list of all people considered who can see a FOAF post of an author
+        # I interpret this as to allowing friends AND friends of friends to see your post
+        friends = Friend.objects.get_friends(author)
+        foaf_set = set(friends)
+        for friend in friends:
+            friends_of_friends = set(Friend.objects.get(friend))
+            foaf_set = foaf_set | friends_of_friends
+        return list(foaf_set)
+
 
 class Follower(models.Model):
     # We are storing follows (unrequited friend requests) in here

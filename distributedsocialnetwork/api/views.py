@@ -255,24 +255,24 @@ class PostDetailView(APIView):
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        #Deleting the post that is at this URI and any associated comments.
+        # Deleting the post that is at this URI and any associated comments.
         try:
             deleted = Post.objects.filter(id=pk).delete()
             deleted_dict = deleted[1]
             deleted_comments = deleted_dict['post.Comment']
             return Response({
                 "query": "deletePost",
-                "success": True, 
+                "success": True,
                 "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
-                })
+            })
         except Exception:
-            #Invalid post URI
+            # Invalid post URI
             return Response({
                 "query": "deletePost",
                 "success": False,
                 "message": "No post with id " + str(pk) + " exists."
             }, status=status.HTTP_404_NOT_FOUND)
-        
+
 
 # ====== /api/posts/<post_id>/comments ======
 
@@ -355,7 +355,12 @@ class AuthUserPosts(APIView):
             user_posts = Post.objects.filter(author=request.user)
             privated_posts = Post.objects.filter(
                 visibility="PRIVATE", visibleTo__icontains=request.user.id)
-            post_query_set = public_posts | user_posts | privated_posts
+            serveronly_posts = Post.objects.filter(visibility="SERVERONLY")
+            friend_posts = Post.objects.filter(
+                visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
+            foaf_posts = Post.objects.filter(
+                visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
+            post_query_set = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(visibility="PUBLIC")
