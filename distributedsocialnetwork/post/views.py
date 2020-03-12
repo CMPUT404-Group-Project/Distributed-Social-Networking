@@ -35,10 +35,10 @@ def create_post(request):
 def view_post(request, pk):
     context = {}
     if request.POST:
-        form = CommentCreationForm(request.POST)
+        form = PostCommentForm(request.POST)
         if form.is_valid():
             new_comment = form.save(commit=False)
-            new_comment.author_id = user.id
+            new_comment.author_id = request.user.id
             new_comment.published = datetime.datetime.now()
             new_comment.save()
         else:
