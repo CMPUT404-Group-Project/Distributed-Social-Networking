@@ -409,11 +409,12 @@ class AuthorPosts(APIView):
                 if Friend.objects.are_friends(request.user, author):
                     # We can send them a few things
                     serveronly_posts = Post.objects.filter(
-                        visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
+                        visibility="SERVERONLY", author=author_id)
                     friend_posts = Post.objects.filter(
-                        visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
+                        visibility="FRIENDS", author=author_id)
+
                     foaf_posts = Post.objects.filter(
-                        visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
+                        visibility="FOAF", author=author_id)
                     post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
 
         else:
