@@ -18,11 +18,11 @@ from .views import PostDetailView, CommentList, VisiblePosts, AuthUserPosts, Aut
 
 
 urlpatterns = [
-    path('posts/', VisiblePosts.as_view(), name='public-posts'),
-    path('posts/<uuid:pk>/', PostDetailView.as_view(), name="posts-detail"),
+    path('posts', VisiblePosts.as_view(), name='public-posts'),
+    path('posts/<uuid:pk>', PostDetailView.as_view(), name="posts-detail"),
     path('posts/<uuid:pk>/comments',
          CommentList.as_view(), name="comments-list"),
-    path('author/posts/', AuthUserPosts.as_view(), name="auth-posts"),
+    path('author/posts', AuthUserPosts.as_view(), name="auth-posts"),
     path('author/<str:pk>/posts', AuthorPosts.as_view(), name="author-posts"),
     path('author/<str:pk>/friends',
          AuthorFriendsList.as_view(), name="author-friends"),

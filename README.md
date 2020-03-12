@@ -102,28 +102,35 @@ $ ./manage makemigrations [app]
 $ ./manage migrate
 ```
 
+**Compile w/ Sass**
+If you are going to be editing any of the base scss files for fine tuning bootstrap styling you will need a sass compiler. Install one from this page(super easy): https://sass-lang.com/install
+
+To theme bootstrap, this is a great reference: https://www.mugo.ca/Blog/How-to-customize-Bootstrap-4-using-Sass
+
+From the base django folder:
+
+```
+sass ./bootstrap/scss/main.scss:bootstrap/css/bootstrap/bootstrap-override.css
+```
+
 **Run Django server**
 
 ```
-$ ./manage.py runserver
+
+\$ ./manage.py runserver
+
 ```
 
 ### Running on Heroku
 
 Link: https://dsnfof.herokuapp.com/
 
-**Create migrations and migrate**
-
-```
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations [DJANGOAPP1] [DJANGOAPP2]
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py migrate
-```
-
 **Create superuser**
 
 ```
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
+
+\$ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
+
 ```
 
 ## Original Contributors and Licensing
@@ -137,6 +144,7 @@ Original _'docs/example-article.json'_, _'docs/project.org'_, and _'docs/swagger
 ### Other Contributors
 
 ```
+
 Abram Hindle
 Ali Sajedi
 Braedy Kuzma
@@ -146,4 +154,9 @@ Erin Torbiak
 Karim Baaba
 Kyle Richelhoff
 Olexiy Berjanskiia
+
+```
+
+```
+
 ```

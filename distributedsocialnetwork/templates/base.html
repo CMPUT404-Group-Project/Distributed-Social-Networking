@@ -15,15 +15,16 @@
 	<link href="https://fonts.googleapis.com/css?family=Oswald&display=swap" rel="stylesheet">
 
 	<!-- Custom Css -->
-	<link rel="stylesheet" href="{% static "distributedsocialnetwork/style.css" %}">
+	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css" %}">
+	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css.map" %}">
+	<link rel="stylesheet" href="{% static "distributedsocialnetwork/styles.css" %}">
 
 	<title>{% block title %} REPLACE ME {% endblock %} - DSNFOF</title>
 </head>
 
-<body>
-	<header class="bg-light" style="margin-bottom: 2em;">
-		<img width="100px" height="72px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo"
-			style="position:fixed; margin: 0.75em 1.5em 1em 1.5em;">
+<body class="container-fluid m-0 p-0">
+	<header class="header">
+		<img class="logo" width="64px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo">
 		<ul class="nav nav-tabs justify-content-end">
 			<!-- Use template inheritance to customize navigation, https://stackoverflow.com/a/341748 -->
 			<li class="nav-item">
@@ -46,7 +47,8 @@
 			{% endif %}
 		</ul>
 	</header>
-	<main class="container pb-5">
+	<main class="row-12 p-0 bg-light m-0">
+		
 		{% block content %} {% endblock content %}
 	</main>
 	<footer class="navbar fixed-bottom bg-info">

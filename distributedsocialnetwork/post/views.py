@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
-from .forms import PostCreationForm
+from .forms import PostCreationForm, PostCommentForm
 from django.conf import settings
 from .models import Post, Comment
+import datetime
+import uuid
 # Create your views here.
 
 
@@ -33,7 +35,23 @@ def create_post(request):
 
 def view_post(request, pk):
     context = {}
+    if request.POST:
+        form = PostCommentForm(request.POST)
+        if form.is_valid():
+            new_comment = form.save(commit=False)
+            new_comment.author_id = request.user.id
+            new_comment.published = datetime.datetime.now()
+            new_comment.id = uuid.uuid4().hex
+            new_comment.post_id = get_object_or_404(Post, id=pk)
+            new_comment.save()
+            return redirect(new_comment.post_id.source)
+        else:
+            form = PostCommentForm()
+    else:
+        form = PostCommentForm()
+
     context['post'] = get_object_or_404(Post, id=pk)
     context['post'].content = context['post'].content.splitlines()
+    context['postCommentForm'] = form
     context['comments'] = Comment.objects.filter(post_id=pk)
     return render(request, 'detailed_post.html', context)
