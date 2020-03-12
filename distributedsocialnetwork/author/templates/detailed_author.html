@@ -3,25 +3,79 @@
 {% block title %} {{ author.displayName }} {% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12">
-    <h1>{{author.displayName}}</h1>
-    <small>Last Online: {{author.last_login}}</small>
+<div class="row p-0 m-0">
+  <!-- Sidebar content -->
+  <div class="col sidebar bg-light">
+    <!-- Sidebar Buttons go here -->
+    {% if friendrequest == "ENABLED" %}
+    <!-- A form to send a friend request -->
+    <form class='friendrequest-button' method="post">
+      {% csrf_token %}
+      <input type="hidden" name="authorID">
+      <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Send Friend Request</button>
+    </form>
+    {% elif friendrequest == "FOLLOWED" %}
+    <!-- A form to accept a friend request -->
+    <form class='friendrequest-button' method="post">
+      {% csrf_token %}
+      <input type="hidden" name="authorID">
+      <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Accept Friend Request</button>
+    </form>
+    {% elif friendrequest == "PENDING" %}
+    <button class="btn btn-lg btn-block btn-outline-primary" disabled>Friend Request Pending</button>
+    {% endif %}
   </div>
-</div>
-<div class="row mt-4">
-  <div class="col-3 text-right">
-    <h2>Posts:</h2>
-  </div>
-  <div class="col-9">
+  <!-- Main "stream" content-->
+  <div class="col-8 stream bg-white pb-3" id="stream">
+    <!-- The Author information -->
+    <div class="row p-2 justify-content-left">
+      <h2>Profile</h2>
+    </div>
+    <div class="col p-2 justify-content-center">
+      <h3>Display Name: {{author.displayName}}</h3>
+      <h3>First Name: {{author.first_name}}</h3>
+      <h3>Last Name: {{author.last_name}}</h3>
+      {% if author.github != ""%}
+      <h3>GitHub: <a href="{{author.github}}">{{author.github}}</a></h3>
+      {% endif %}
+      <small>Last Online: {{author.last_login}} {{ relationship }}</small>
+    </div>
+    
+    <br>
+    <!-- Start of Posts -->
+    <div class="row p-2 justify-content-left">
+      <h2>Posts</h2>
+    </div>
     {% for post in posts %}
-    <a href="{{ post.source }}">
-      <div class="row-12">
-        <h4>{{ post.title }}</h4>
-        <p class="small">{{ post.description }}</p>
+    <div class="card m-2 post">
+      <div class="card-body">
+        <a class="card-title" href="{{ post.source }}">
+          <div class="row-12">
+            <h5>{{post.title}}</h5>
+          </div>
+        </a>
+        <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
+        <p class="card-text">{{ post.content }}</p>
       </div>
-    </a>
+      <div class="card-footer text-muted text-right p-2">
+        <p class="m-0">{{ post.author.first_name }} {{ post.author.last_name }}</p>
+        <p class="small m-0">{{ post.published }}</p>
+      </div>
+    </div>
     {% endfor %}
+    <!-- Placeholder card if there are no posts to see -->
+    {% if posts.count == 0 %}
+      <div class="card m-2 post">
+        <div class="card-body">
+          <div class="card-title">
+            <h5>There are no posts available 😞</h5>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+  <!-- Right sidebar (no content) -->
+  <div class="col text-right sidebar bg-light">
   </div>
 </div>
 {% endblock %}
