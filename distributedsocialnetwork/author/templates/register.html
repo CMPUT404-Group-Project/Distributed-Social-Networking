@@ -12,7 +12,7 @@
       <h2>Register</h2>
     </div>    
     <form method="POST">
-    {% csrf token %}
+    {% csrf_token %}
     
     {% for field in form %}
     <p>
