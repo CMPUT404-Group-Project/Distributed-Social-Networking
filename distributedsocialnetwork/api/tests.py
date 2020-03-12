@@ -364,6 +364,7 @@ class PostDetailView(APITestCase):
         # Test that this post isn't in the database
         self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
 
+
 class CommentList(APITestCase):
     def setUp(self):
         self.testUserId = 'http://testserver.com/author/' + \
@@ -536,10 +537,18 @@ class AuthUserPosts(APITestCase):
 
     def setUp(self):
         # We will create two authors, and a few different kinds of posts.
-        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
-                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
         self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
+        self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
+                                             displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        self.author3 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author3", github="http://github.com/what", email="email3@mail.com", password="foo")
+
+        # We will make some friends here:
+        # Author 1 will be friends with Author 2
+        # Author 2 will be friends with Author 3
+        Friend.objects.add_friend(self.author1, self.author2)
+        Friend.objects.add_friend(self.author2, self.author3)
 
         # First post will be a public post written by author 1
         self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
@@ -565,15 +574,42 @@ class AuthUserPosts(APITestCase):
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
 
+        # Fifth post will be a post set to serveronly visibility by author 1. Only authors 1 and 2 should be able to see it.
+        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
+
+        # Sixth post will be a post set to friend-only visibility by author1. Author 1 and 2 should be able to see it.
+        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
+        # Seventh post will be a FOAF post by author1. Everyone should be able to see it.
+        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
+
     def test_get_list(self):
         url = reverse('auth-posts')
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 2 posts
         self.assertEqual(len(response.data["posts"]), 2)
+        # We log in as author1
+        self.client.force_authenticate(user=self.author1)
+        response = self.client.get(url, format='json')
+        # This user should be able to retrieve all posts
+        self.assertEqual(len(response.data["posts"]), 7)
         # We log in as author2
         self.client.force_authenticate(user=self.author2)
         response = self.client.get(url, format='json')
-        # This user should be able to retrieve 3 posts
+        # They should be able to retrieve 6 posts
+        self.assertEqual(len(response.data["posts"]), 6)
+        # We log in as author3
+        self.client.force_authenticate(user=self.author3)
+        response = self.client.get(url, format='json')
+        # They should be able to retrieve 3 posts
         self.assertEqual(len(response.data["posts"]), 3)
 
 
@@ -585,7 +621,8 @@ class AuthorPosts(APITestCase):
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
         self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
-
+        #  We will make them friends.
+        Friend.objects.add_friend(self.author1, self.author2)
         # First post will be a public post written by author 1
         self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
                                          origin="http://firstpost.com/origin", description="This is the first post",
@@ -609,6 +646,21 @@ class AuthorPosts(APITestCase):
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
+        # Fifth post will be a post written by author1 visible only to friends on the server
+        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
+        # Sixth post will be written by author1 visible only to friends
+        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
+        # Seventh post will be written by author1 visible only to FOAF
+        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source="http:fourthpost.com",
+                                         origin="http://fourthpost.com/origin", description="This is the fourth post",
+                                         author=self.author1, categories="", published=datetime.datetime(
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
 
     def test_get_list(self):
         author_uuid_blurb = self.author1.id[29:]
@@ -619,13 +671,13 @@ class AuthorPosts(APITestCase):
         # We log in as author2
         self.client.force_authenticate(user=self.author2)
         response = self.client.get(url, format='json')
-        # We should be seeing 2 posts
-        self.assertEqual(len(response.data["posts"]), 2)
+        # We should be seeing 5 posts
+        self.assertEqual(len(response.data["posts"]), 5)
         # We log in as author1
         self.client.force_authenticate(user=self.author1)
         response = self.client.get(url, format='json')
-        # We should be seeing 3 posts
-        self.assertEqual(len(response.data["posts"]), 3)
+        # We should be seeing 6 posts
+        self.assertEqual(len(response.data["posts"]), 6)
 
 
 class AuthorFriendsList(APITestCase):

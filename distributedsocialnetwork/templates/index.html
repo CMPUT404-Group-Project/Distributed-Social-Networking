@@ -5,31 +5,56 @@
 {% endblock  %}
 
 {% block content %}
-<div class="row">
-  <div class="col-8 container">
+<div class="row container-full no-gutters">
+  <div class="col sidebar">
     <div class="row justify-content-center">
-      <h2>STREAM</h2>
+    </div>
+    {% if request.user.is_authenticated %}
+    <div class="row p-2 m-2 justify-content-center">
+        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{% url 'post:create' %}">Create</a>
+    </div>
+    <div class="row p-2 m-2 justify-content-center">
+        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="#">Friends</a>
+    </div>
+    {%endif%}
+  </div>
+  <div class="col-8 stream">
+    <div class="row no-gutters p-2 justify-content-left">
+      <h2>Stream</h2>
     </div>
     {% for post in posts %}
-      <a href="{{ post.source }}">
-      <div class="row-12">
-        <h4>{{ post.title }}</h4>
-        <p class="small">{{ post.description }}</p>
+    <div class="card m-2 post">
+      <div class="card-body">
+        <a class="card-title" href="{{ post.source }}">
+          <div class="row-12">
+            <h5>{{ post.title }}</h5>
+          </div>
+        </a>
+        <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
+        <p class="card-text">{{ post.content }}</p>
       </div>
-    </a>
+      <div class="card-footer text-muted text-right p-2">
+        <p class="m-0">{{ post.author.first_name }} {{ post.author.last_name }}</p>
+        <p class="small m-0">{{ post.published }}</p>
+      </div>
+    </div>
     {% endfor %}
   </div>
-  <div class="col-4 container text-right">
+  <div class="col text-right sidebar">
     <div class="row justify-content-center">
-      <h2>FEATURED AUTHORS</h2>
+      <h2>Featured Authors</h2>
     </div>
     {% for author in authors %}
-    <a href="{{ author.url }}">
-      <div class="row-12">
-        <h5>{{ author }}</h5>
-        <p class="small">Last Online: {{ author.last_login }}</p>
+    <div class="card m-2 featured-author">
+      <div class="card-body">
+        <a class="card-title" href="{{ author.url }}">
+          <div class="row-12">
+            <h5>{{ author }}</h5>
+          </div>
+        </a>
+        <p class="card-subtitle small">Last Online: {{ author.last_login }}</p>
       </div>
-    </a>
+    </div>
     {% endfor %}
   </div>
 </div>
