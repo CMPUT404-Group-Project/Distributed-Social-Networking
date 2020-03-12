@@ -33,7 +33,20 @@ def create_post(request):
 
 def view_post(request, pk):
     context = {}
+    if request.POST:
+        form = CommentCreationForm(request.POST)
+        if form.is_valid():
+            new_comment = form.save(commit=False)
+            new_comment.author_id = user.id
+            new_comment.origin = settings.FORMATTED_HOST_NAME + \
+                'posts/' + str(new_post.id)
+            new_comment.source = new_comment.origin
+            new_comment.save()
+    else:
+        form = CommentCreationForm()
+
     context['post'] = get_object_or_404(Post, id=pk)
     context['post'].content = context['post'].content.splitlines()
+    context['commentCreationForm'] = form
     context['comments'] = Comment.objects.filter(post_id=pk)
     return render(request, 'detailed_post.html', context)

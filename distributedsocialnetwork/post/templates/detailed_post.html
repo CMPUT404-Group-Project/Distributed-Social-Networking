@@ -38,7 +38,7 @@
 	 <div class="col-9 my-2 pl-5">
 	   <form method="POST">
 	     {% csrf_token %} {% for field in postCommentForm %}
-	     <p>{{field.label_tag}}{{field}}</p>
+	     <p>{{field}}</p>
 	     {% endfor %}{% if postCommentForm.non_field_errors %}
 	     <div style="color: red">
 			 <p>{{postCommentForm.non_field_errors}}</p>	     
