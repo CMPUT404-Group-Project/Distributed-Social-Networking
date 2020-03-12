@@ -3,10 +3,22 @@
 {% block title %} {{ author.displayName }} {% endblock %}
 
 {% block content %}
+
 <div class="row">
   <div class="col-12">
-    <h1>{{author.displayName}}</h1>
+    <!-- The Author information -->
+    <h1>Profile</h1>
+    <h3>Display Name: {{author.displayName}}</h3>
+    <h3>First Name: {{author.first_name}}</h3>
+    <h3>Last Name: {{author.last_name}}</h3>
+    {% if author.github != ""%}
+    <h3>GitHub: <a href="{{author.github}}">{{author.github}}</a></h3>
+    {% endif %}
     <small>Last Online: {{author.last_login}}</small>
+    <br>
+    {% if user != None and user.id != author.id %}
+    <button id=sendRequest onclick="sendFriendRequest()">Send Friend Request</button>
+    {% endif %}
   </div>
 </div>
 <div class="row mt-4">
@@ -22,6 +34,9 @@
       </div>
     </a>
     {% endfor %}
+    {% if posts.count == 0 %}
+      <h4>There are no posts available 😞</h4>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
