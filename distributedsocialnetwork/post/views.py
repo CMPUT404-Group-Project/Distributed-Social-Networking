@@ -41,6 +41,8 @@ def view_post(request, pk):
             new_comment.author_id = user.id
             new_comment.published = datetime.datetime.now()
             new_comment.save()
+        else:
+            form = CommentCreationForm()
     else:
         form = CommentCreationForm()
 
