@@ -23,4 +23,5 @@ urlpatterns = [
     path('author/', include('author.urls')),
     path('posts/', include('post.urls', namespace='post')),
     path('api/', include('api.urls')),
+    path('friends/', include('friend.urls'))
 ]

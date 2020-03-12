@@ -11,7 +11,7 @@ class FollowerManager(models.Manager):
 
     def get_followers(self, author):
         # Return the authors following you
-        followers = Follower.objects.fitler(
+        followers = Follower.objects.filter(
             other=author)
         authors = []
         for connection in followers:
