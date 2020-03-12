@@ -4,26 +4,31 @@
 
 {% block content %}
 
-<h2>Register</h2>
-<form method="POST">
-    {% csrf_token %}
-
+<div class="row p-0 m-0">
+  <div class="col-8 stream bg-white pb-3" id="stream">
+    <div class="row p-2 justify-content-left">
+      <h2>Register</h2>
+    </div>    
+    <form method="POST">
+    {% csrf token %}
+    
     {% for field in form %}
     <p>
-        {{field.label_tag}}
-        {{field}}
-
-        {% if field.help_text %}
-        <small style="color: gray;">{{field.help_text}}</small>
-        {% endif %}
-
-        {% for error in field.errors %}
-        <p style="color: red;">{{error}}</p>
-        {% endfor %}
+      {{field.label_tag}}
+      {{field}}
+      
+      {% if field.help_text %}
+      <small style="color: gray;">{{field.help_text}}</small>
+      {% endif %}
+      
+      {% for error in field.errors %}
+      <p style="color: red;">{{error}}</p>
+      {% endfor %}
     </p>
     {% endfor %}
-
     <button type="submit">Create</button>
-</form>
+    </form>
+  </div>
+</div>
 
 {% endblock  %}
