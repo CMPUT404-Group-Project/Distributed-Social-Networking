@@ -8,7 +8,8 @@ class PostCreationForm(ModelForm):
         fields = ('title', 'description', 'contentType',
                   'content', 'categories', 'visibility', 'visibleTo')
 
+
 class PostCommentForm(ModelForm):
     class Meta:
         model = Comment
-        fields = ('comment',)
+        fields = ('comment', 'contentType')
