@@ -65,6 +65,12 @@ h2, a {
     border-radius: 10px;
 }
 
+.comment{
+    border-color: var(--primary-color);
+    border-radius: 10px;
+}
+
+
 .featured-author {
     border-color: var(--primary-color);
     border-radius: 10px;
