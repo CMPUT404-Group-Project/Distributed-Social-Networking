@@ -98,7 +98,7 @@ class VisiblePosts(APITestCase):
         self.assertEqual(len(response.data["posts"][0]["comments"]), 0)
         # Test that there is a list of comments
         self.assertEqual(response.data["posts"][0]["next"],
-                         'http://testserver' + url + response.data["posts"][0]["id"] + '/comments')
+                         'http://testserver' + url + '/' + response.data["posts"][0]["id"] + '/comments')
         # Test that each element of a given post is the same as what we inserted
         self.assertEqual(
             uuid.UUID(response.data["posts"][0]["id"]), uuid.UUID(self.post_id2))
@@ -198,7 +198,7 @@ class PostDetailView(APITestCase):
         }
 
     def test_get(self):
-        url = '/api/posts/' + self.post_id1_string + '/'
+        url = '/api/posts/' + self.post_id1_string
         response = self.client.get(url, format='json')
         # Test for response properly spent
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -226,11 +226,11 @@ class PostDetailView(APITestCase):
         self.assertEqual(len(response.data["posts"][0]["comments"]), 0)
         # Test that there is a list of comments
         self.assertEqual(response.data["posts"][0]["next"],
-                         'http://testserver' + url + 'comments')
+                         'http://testserver' + url + '/comments')
 
     def test_post_to_existing_uri(self):
         # This should fail
-        url = '/api/posts/' + self.post_id1_string + '/'
+        url = '/api/posts/' + self.post_id1_string
 
         response = self.client.post(url, self.post_data, format='json')
         # Test to ensure that this post has not been inserted
@@ -239,7 +239,7 @@ class PostDetailView(APITestCase):
     def test_post_to_new_uri(self):
         # This should succeed and return a 201 Created
         new_post_id = self.post_id1_string[:-1] + '4'
-        url = '/api/posts/' + new_post_id + '/'
+        url = '/api/posts/' + new_post_id
         response = self.client.post(url, self.post_data, format='json')
         # Test to ensure that this post has been inserted
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -271,7 +271,7 @@ class PostDetailView(APITestCase):
 
             }
         }
-        url = '/api/posts/' + new_post_id + '/'
+        url = '/api/posts/' + new_post_id
         response = self.client.post(url, invalid_post, format='json')
         # We don't have a title set, so it should fail to create the post
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -301,7 +301,7 @@ class PostDetailView(APITestCase):
 
             }
         }
-        url = '/api/posts/' + self.post_id1_string + '/'
+        url = '/api/posts/' + self.post_id1_string
         response = self.client.put(url, post_data, format='json')
         # Check that it responds with 200 OK
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -334,7 +334,7 @@ class PostDetailView(APITestCase):
 
             }
         }
-        url = '/api/posts/' + self.post_id1_string + '/'
+        url = '/api/posts/' + self.post_id1_string
         response = self.client.put(url, post_data, format='json')
         # We don't have a title set, so it should fail to create the post
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -345,7 +345,7 @@ class PostDetailView(APITestCase):
     def test_delete_post(self):
         # This should succeed and return a 200 OK
         new_post_id = self.post_id1_string[:-1] + '5'
-        url = '/api/posts/' + new_post_id + '/'
+        url = '/api/posts/' + new_post_id
         self.client.post(url, self.post_data, format='json')
         # Test that this new post is in the database
         self.assertEqual(Post.objects.filter(id=new_post_id).count(), 1)
@@ -357,7 +357,7 @@ class PostDetailView(APITestCase):
 
     def test_delete_post_invalid_uri(self):
         new_post_id = self.post_id1_string[:-1] + '6'
-        url = '/api/posts/' + new_post_id + '/'
+        url = '/api/posts/' + new_post_id
         response = self.client.delete(url, format='json')
         # This post doesn't exist, so we should get a 404 back
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
