@@ -6,7 +6,9 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 
 # Create your views here.
-def show_friends(request):    
+
+
+def show_friends(request):
     context = {}
     current_user = request.user
     if not current_user.is_authenticated:
@@ -16,6 +18,7 @@ def show_friends(request):
     context['mode'] = 'Friends'
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
+
 
 def show_followers(request):
     context = {}
@@ -28,6 +31,7 @@ def show_followers(request):
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
 
+
 def show_following(request):
     context = {}
     current_user = request.user
@@ -38,6 +42,7 @@ def show_following(request):
     context['mode'] = 'Following'
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
+
 
 def show_other(request):
     context = {}
@@ -60,6 +65,7 @@ def show_other(request):
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
 
+
 def follow_author(request):
     # follow local author
     if request.method == "POST":
@@ -70,14 +76,17 @@ def follow_author(request):
         FollowerManager.add_follower("", current_user, to_follow)
     return redirect(show_other)
 
+
 def unfollow_author(request):
     # unfollow local author
     if request.method == "POST":
         current_user = request.user
         to_unfollow_id = request.POST["authorId"]
-        unfollow = Follower.objects.filter(current_id=current_user.id, other_id=to_unfollow_id)
-        unfollow.delete()   
+        unfollow = Follower.objects.filter(
+            current_id=current_user.id, other_id=to_unfollow_id)
+        unfollow.delete()
     return redirect(show_following)
+
 
 def accept_request(request):
     # accept friend request, removes them from followers
@@ -88,6 +97,7 @@ def accept_request(request):
         FriendManager.add_friend("", current_user, to_friend)
     return redirect(show_followers)
 
+
 def remove_friend(request):
     # remove friend locally
     if request.method == "POST":
@@ -95,15 +105,15 @@ def remove_friend(request):
         to_remove_id = request.POST["authorId"]
         to_remove = Author.objects.filter(id=to_remove_id)[0]
         FriendManager.remove_friend("", current_user, to_remove)
-        FriendManager.remove_friend("", to_remove, current_user)
     return redirect(show_friends)
+
 
 def reject_request(request):
     # reject friend request, equivalent to removing person as a follower
     if request.method == "POST":
         current_user = request.user
         to_reject_id = request.POST["authorId"]
-        reject = Follower.objects.filter(current_id=to_reject_id, other_id=current_user.id)
+        reject = Follower.objects.filter(
+            current_id=to_reject_id, other_id=current_user.id)
         reject.delete()
     return redirect(show_followers)
-
