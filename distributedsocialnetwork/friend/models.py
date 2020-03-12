@@ -11,7 +11,7 @@ class FollowerManager(models.Manager):
 
     def get_followers(self, author):
         # Return the authors following you
-        followers = Follower.objects.fitler(
+        followers = Follower.objects.filter(
             other=author)
         authors = []
         for connection in followers:
@@ -83,6 +83,16 @@ class FriendManager(models.Manager):
             return False
         friend_object = Friend.objects.get(current=current_author)
         return (other_author in friend_object.other.all())
+
+    def get_foaf(self, author):
+        # Return a list of all people considered who can see a FOAF post of an author
+        # I interpret this as to allowing friends AND friends of friends to see your post
+        friends = Friend.objects.get_friends(author)
+        foaf_set = set(friends)
+        for friend in friends:
+            friends_of_friends = set(Friend.objects.get_friends(friend))
+            foaf_set = foaf_set | friends_of_friends
+        return list(foaf_set)
 
 
 class Follower(models.Model):
