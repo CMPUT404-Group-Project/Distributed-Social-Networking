@@ -91,9 +91,20 @@ def logout_author(request):
 def view_author(request, pk):
     context = {}
     context['author'] = get_object_or_404(Author, id__icontains=pk)
-    if request.GET:
+    if request.method == "GET":
+        context["friendrequest"] = "DISABLED"
         if request.user.is_authenticated:
             context["user"] = request.user
+            context["friendrequest"] = "ENABLED"
+            if request.user.id == context["author"].id or Friend.objects.are_friends(request.user, context["author"]):
+                # They should not be able to send a friend request
+                context["friendrequest"] = "DISABLED"
+            if Follower.objects.is_following(request.user, context["author"]):
+                # We have already sent a friend request
+                context["friendrequest"] = "PENDING"
+            if Follower.objects.is_followed_by(request.user, context["author"]):
+                # We should make the button accept the friend request instead
+                context["friendrequest"] = "FOLLOWED"
             # We will show different posts depending on if the user is logged in and authenticated
             if request.user.id == context["author"].id:
                 # The user is logged in, so they should be able to see all of their posts
@@ -121,13 +132,21 @@ def view_author(request, pk):
             context['posts'] = Post.objects.filter(
                 author=context['author'].id, visibility="PUBLIC")
             context["user"] = None
-    if request.POST:
+    if request.method == "POST":
         # A post here is when we are going to send a friend request from the currently authenticated user
         if request.user.is_authenticated:
             # This should be true, but in case it is not
             user = request.user
-            if not Follower.objects.is_following(user, context["author"]) and not Friend.objects.are_friends(user, context["author"]):
-                # Checking that they are not friends, and that we have not already sent a friend request
-                Follower.objects.add_follower(user, context["author"])
-                return redirect('detailed_author.html')
+            if not Friend.objects.are_friends(user, context["author"]):
+                if Follower.objects.is_followed_by(user, context["author"]):
+                    # The have sent us a friend request, so the POST is to accept it
+                    Friend.objects.add_friend(user, context["author"])
+                    return redirect(request.path)
+                else:
+                    if not Follower.objects.is_following(user, context["author"]):
+                        # Checking that they are not friends, and that we have not already sent a friend request
+                        Follower.objects.add_follower(user, context["author"])
+                    return redirect(request.path)
+        # If they sent a post but aren't authenticated we redirect them back to the page
+        return redirect(request.path)
     return render(request, 'detailed_author.html', context)

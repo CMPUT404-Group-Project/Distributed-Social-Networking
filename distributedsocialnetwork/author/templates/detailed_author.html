@@ -14,10 +14,24 @@
     {% if author.github != ""%}
     <h3>GitHub: <a href="{{author.github}}">{{author.github}}</a></h3>
     {% endif %}
-    <small>Last Online: {{author.last_login}}</small>
+    <small>Last Online: {{author.last_login}} {{ relationship }}</small>
     <br>
-    {% if user != None and user.id != author.id %}
-    <button id=sendRequest onclick="sendFriendRequest()">Send Friend Request</button>
+    {% if friendrequest == "ENABLED" %}
+    <!-- A form to send a friend request -->
+    <form class='friendrequest-button' method="post">
+      {% csrf_token %}
+      <input type="hidden" name="authorID">
+      <button type="submit" class="btn btn-primary">Send Friend Request</button>
+    </form>
+    {% elif friendrequest == "FOLLOWED" %}
+    <!-- A form to accept a friend request -->
+    <form class='friendrequest-button' method="post">
+      {% csrf_token %}
+      <input type="hidden" name="authorID">
+      <button type="submit" class="btn btn-primary">Accept Friend Request</button>
+    </form>
+    {% elif friendrequest == "PENDING" %}
+    <button class="btn btn-primary" disabled>Friend Request Pending</button>
     {% endif %}
   </div>
 </div>
