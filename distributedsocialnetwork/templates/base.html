@@ -15,37 +15,39 @@
 	<link href="https://fonts.googleapis.com/css?family=Oswald&display=swap" rel="stylesheet">
 
 	<!-- Custom Css -->
-	<link rel="stylesheet" href="{% static "distributedsocialnetwork/style.css" %}">
+	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css" %}">
+	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css.map" %}">
+	<link rel="stylesheet" href="{% static "distributedsocialnetwork/styles.css" %}">
 
 	<title>{% block title %} REPLACE ME {% endblock %} - DSNFOF</title>
 </head>
 
 <body>
-	<header class="bg-light header">
-		<img class="logo" width="64px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo">
-		<ul class="nav nav-tabs justify-content-end">
-			<!-- Use template inheritance to customize navigation, https://stackoverflow.com/a/341748 -->
-			<li class="nav-item">
-				{% block nav-home%}<a class="nav-link" href="{% url 'home' %}">Home</a>{% endblock %}
-			</li>
-			{% if request.user.is_authenticated %}
-			<li class="nav-item">
-				{% block nav-profile%}<a class="nav-link" href="{% url 'update' %}">{{ request.user|title }}</a>{% endblock %}
-			</li>
-			<li class="nav-item">
-				{% block nav-logout%}<a class="nav-link" href="{% url 'logout' %}">Logout</a>{% endblock %}
-			</li>
-			{% else %}
-			<li class="nav-item">
-				{% block nav-login%}<a class="nav-link" href="{% url 'login' %}">Sign In</a>{% endblock %}
-			</li>
-			<li class="nav-item">
-				{% block nav-register%}<a class="nav-link" href="{% url 'register' %}">Get Started</a>{% endblock %}
-			</li>
-			{% endif %}
-		</ul>
-	</header>
-	<main class="container-full p-0 no-gutters">
+	<main class="container-fluid p-0 bg-light">
+		<header class="header">
+			<img class="logo" width="64px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo">
+			<ul class="nav nav-tabs justify-content-end">
+				<!-- Use template inheritance to customize navigation, https://stackoverflow.com/a/341748 -->
+				<li class="nav-item">
+					{% block nav-home%}<a class="nav-link" href="{% url 'home' %}">Home</a>{% endblock %}
+				</li>
+				{% if request.user.is_authenticated %}
+				<li class="nav-item">
+					{% block nav-profile%}<a class="nav-link" href="{% url 'update' %}">{{ request.user|title }}</a>{% endblock %}
+				</li>
+				<li class="nav-item">
+					{% block nav-logout%}<a class="nav-link" href="{% url 'logout' %}">Logout</a>{% endblock %}
+				</li>
+				{% else %}
+				<li class="nav-item">
+					{% block nav-login%}<a class="nav-link" href="{% url 'login' %}">Sign In</a>{% endblock %}
+				</li>
+				<li class="nav-item">
+					{% block nav-register%}<a class="nav-link" href="{% url 'register' %}">Get Started</a>{% endblock %}
+				</li>
+				{% endif %}
+			</ul>
+		</header>
 		{% block content %} {% endblock content %}
 	</main>
 	<footer class="navbar fixed-bottom bg-info">

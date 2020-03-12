@@ -5,8 +5,8 @@
 {% endblock  %}
 
 {% block content %}
-<div class="row container-full no-gutters">
-  <div class="col sidebar">
+<div class="row p-0 m-0">
+  <div class="col sidebar bg-light">
     <div class="row justify-content-center">
     </div>
     {% if request.user.is_authenticated %}
@@ -18,8 +18,8 @@
     </div>
     {%endif%}
   </div>
-  <div class="col-8 stream">
-    <div class="row no-gutters p-2 justify-content-left">
+  <div class="col-8 stream bg-white pb-3" id="stream">
+    <div class="row p-2 justify-content-left">
       <h2>Stream</h2>
     </div>
     {% for post in posts %}
@@ -40,7 +40,7 @@
     </div>
     {% endfor %}
   </div>
-  <div class="col text-right sidebar">
+  <div class="col text-right sidebar bg-light">
     <div class="row justify-content-center">
       <h2>Featured Authors</h2>
     </div>
