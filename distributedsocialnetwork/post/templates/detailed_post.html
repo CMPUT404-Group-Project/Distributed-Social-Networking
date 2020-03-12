@@ -32,6 +32,23 @@
     </div>
   </div>
   <div class="row border-top">
+	 <div class="col-3 my-2 pl-5">
+		<h2 class="text-danger">Add a Comment:</h2>
+	 </div>
+	 <div class="col-9 my-2 pl-5">
+	   <form method="POST">
+	     {% csrf_token %} {% for field in postCommentForm %}
+	     <p>{{field}}</p>
+	     {% endfor %}{% if postCommentForm.non_field_errors %}
+	     <div style="color: red">
+			 <p>{{postCommentForm.non_field_errors}}</p>	     
+	     </div>
+	     {% endif %}
+	     <button type="submit">Submit Comment</button>
+	   </form>	 
+	 </div>
+  </div>
+  <div class="row border-top">
     <div class="col-3 my-2 pl-5">
       <h2 class="text-danger">Comments</h2>
     </div>
