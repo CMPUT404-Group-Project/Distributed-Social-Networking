@@ -112,14 +112,6 @@ $ ./manage.py runserver
 
 Link: https://dsnfof.herokuapp.com/
 
-**Create migrations and migrate**
-
-```
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations [DJANGOAPP1] [DJANGOAPP2]
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py makemigrations
-$ heroku run --app dsnfof python distributedsocialnetwork/manage.py migrate
-```
-
 **Create superuser**
 
 ```

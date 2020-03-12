@@ -21,9 +21,8 @@
 </head>
 
 <body>
-	<header class="bg-light" style="margin-bottom: 2em;">
-		<img width="100px" height="72px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo"
-			style="position:fixed; margin: 0.75em 1.5em 1em 1.5em;">
+	<header class="bg-light header">
+		<img class="logo" width="64px" src="{% static "distributedsocialnetwork/DSN-404.png" %}" alt="DSN logo">
 		<ul class="nav nav-tabs justify-content-end">
 			<!-- Use template inheritance to customize navigation, https://stackoverflow.com/a/341748 -->
 			<li class="nav-item">
@@ -46,7 +45,7 @@
 			{% endif %}
 		</ul>
 	</header>
-	<main class="container pb-5">
+	<main class="container-full p-0 no-gutters">
 		{% block content %} {% endblock content %}
 	</main>
 	<footer class="navbar fixed-bottom bg-info">
