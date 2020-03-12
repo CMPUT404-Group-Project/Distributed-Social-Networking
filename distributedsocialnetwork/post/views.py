@@ -3,6 +3,7 @@ from django.urls import reverse_lazy
 from .forms import PostCreationForm
 from django.conf import settings
 from .models import Post, Comment
+import datetime
 # Create your views here.
 
 
@@ -38,9 +39,7 @@ def view_post(request, pk):
         if form.is_valid():
             new_comment = form.save(commit=False)
             new_comment.author_id = user.id
-            new_comment.origin = settings.FORMATTED_HOST_NAME + \
-                'posts/' + str(new_post.id)
-            new_comment.source = new_comment.origin
+            new_comment.published = datetime.datetime.now()
             new_comment.save()
     else:
         form = CommentCreationForm()
