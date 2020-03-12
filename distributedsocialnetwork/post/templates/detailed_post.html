@@ -3,7 +3,7 @@
 {% block title %} {{ post.title }} {% endblock %}
 
 {% block content %}
-  <div class="row">
+  <div class="row-12">
     <div class="col-2 border-right">
       <h5>Published By:</h5>
       <a class="text-right d-block" href="{{post.author_id}}">
@@ -12,7 +12,7 @@
       </a>
     </div>
   </div>
-  <div class="row">
+  <div class="row-12">
     <div class="col-2 border-right">
     </div>
     <div class="col-10 text-center">
@@ -22,7 +22,7 @@
       <h5>{{post.description}}</h5>
     </div>
   </div>
-  <div class="row">
+  <div class="row-12">
     <div class="col-2 border-right">
     </div>
     <div class="col-10 my-4">
@@ -31,14 +31,31 @@
       {% endfor %}
     </div>
   </div>
-  <div class="row border-top">
+  <div class="row-12 border-top">
+	 <div class="col-3 my-2">
+		<h2 class="text-danger">Add a Comment:</h2>
+	 </div>
+	 <div class="col-9 my-2">
+	   <form method="POST">
+	     {% csrf_token %} {% for field in postCommentForm %}
+	     <p>{{field}}</p>
+	     {% endfor %}{% if postCommentForm.non_field_errors %}
+	     <div style="color: red">
+			 <p>{{postCommentForm.non_field_errors}}</p>	     
+	     </div>
+	     {% endif %}
+	     <button type="submit">Submit Comment</button>
+	   </form>	 
+	 </div>
+  </div>
+  <div class="row-12 border-top">
     <div class="col-3 my-2 pl-5">
       <h2 class="text-danger">Comments</h2>
     </div>
   </div>
 
   {% for comment in comments %}
-  <div class="row my-2">
+  <div class="row-12 my-2">
     <div class="col-3"></div>
     {% if forloop.last %}
       <div class="col-2">

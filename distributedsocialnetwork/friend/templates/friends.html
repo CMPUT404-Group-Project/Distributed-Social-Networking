@@ -1,0 +1,105 @@
+{% extends 'index.html' %} 
+{% block title %} {{mode}} {% endblock %} 
+
+{% block content %}
+
+<div class="row">
+        <div class="col-3"></div>
+        <div class="col-6 main" style="padding:0">
+            <div class="row follow-headers">
+                <div class="col-3 follow-header" id="friends-header" onclick="location.href='friends'">Friends</div>
+                <div class="col-3 follow-header" id="followers-header" onclick="location.href='pending'">Pending</div>
+                <div class="col-3 follow-header" id="following-header" onclick="location.href='following'">Following</div>
+                <div class="col-3 follow-header" id="others-header" onclick="location.href='other'">Other</div>
+
+            </div>
+                <ul class="list-group">
+                    {% for author in authors %}
+                    <li class="list-group-item">
+                            <div class="row follow">
+                                <div class="col-8 follow-name">
+                                    <h5>{{author.first_name}} {{author.last_name}}</h5>
+                                    <a href="{{author.url}}"><h6>@{{author.displayName}}</h6></a>
+                                </div>
+                                {% if mode == 'Pending' %}
+                                <div class="col-4 follow-button-container">
+                                    <form class='follow-button' method="post" action="reject">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="authorId" value="{{author.id}}">
+                                            <button type="submit" class="btn btn-primary">Decline</button>
+                                        </form>
+                                    <form class='follow-button' method="post" action="accept">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="authorId" value="{{author.id}}">
+                                        <button type="submit" class="btn btn-primary">Accept</button>
+                                    </form>
+                                </div>
+                                {% elif mode == 'Friends' %}
+                                <div class="col-4 follow-button-container">
+                                    <form class='follow-button' method="post" action="unfriend">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="authorId" value="{{author.id}}">
+                                            <button type="submit" class="btn btn-primary">Remove Friend</button>
+                                    </form>
+                                </div>
+                                {% elif mode == 'Following' %}
+                                <div class="col-4 follow-button-container">
+                                    <form class='follow-button' method="post" action="unfollow">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="authorId" value="{{author.id}}">
+                                            <button type="submit" class="btn btn-primary">Unfollow</button>
+                                    </form>
+                                        
+                                </div>
+                                {% elif mode == 'Others' %}
+                                <div class="col-4 follow-button-container">
+                                    <form method="post" action="follow">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="authorId" value="{{author.id}}">
+                                            <button type="submit" class="btn btn-primary">Follow</button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                                
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+        </div>
+        <div class="col-3"></div>
+</div>
+
+
+{% if mode == 'Pending' %}
+<style>#followers-header{background-color: lightgrey}</style>
+{% elif mode == 'Friends' %}
+<style>#friends-header{background-color: lightgrey}</style>
+{% elif mode == 'Following' %}
+<style>#following-header{background-color: lightgrey}</style>
+{% elif mode == 'Others' %}
+<style>#others-header{background-color: lightgrey}</style>
+{% endif %}
+
+    
+<style>
+    .follow-button{
+        float:right;
+        background-color:gold;
+        margin-right: 2%;
+    }
+    .follow-headers{
+        margin:0;
+        text-align:center;
+        font-size: 1.5em;
+    }
+
+    .follow-header:hover {
+        background-color: lightgrey;
+    }
+   
+    .follow-button-container{
+        margin: auto;
+        text-align: right;
+    }
+</style>
+{% endblock %}
