@@ -31,6 +31,7 @@
       {% endfor %}
     </div>
   </div>
+  {% if request.user.is_authenticated %}
   <div class="row-12 border-top">
 	 <div class="col-3 my-2">
 		<h2 class="text-danger">Add a Comment:</h2>
@@ -48,6 +49,7 @@
 	   </form>	 
 	 </div>
   </div>
+  {% endif %}
   <div class="row-12 border-top">
     <div class="col-3 my-2 pl-5">
       <h2 class="text-danger">Comments</h2>
