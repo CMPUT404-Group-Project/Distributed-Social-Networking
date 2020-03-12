@@ -15,5 +15,5 @@ urlpatterns = [
     path('update/', change_author, name="update"),
     path('login/', login_author, name="login"),
     path('logout/', logout_author, name="logout"),
-    path('<str:pk>', view_author, name="author")
+    path('<str:pk>/', view_author, name="author")
 ]
