@@ -1,4 +1,5 @@
 {% load static %}
+{% load sass_tags %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -16,8 +17,10 @@
 	<link href="https://fonts.googleapis.com/css?family=Oswald&display=swap" rel="stylesheet">
 
 	<!-- Custom Css -->
-	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css" %}">
-	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css.map" %}">
+	<!-- <link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css" %}">
+	<link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css.map" %}"> -->
+	<link rel="stylesheet" href="{% sass_src "bootstrap/main.css" %}">
+	<!-- <link rel="stylesheet" href="{% static "bootstrap/bootstrap-override.css.map" %}"> -->
 	<link rel="stylesheet" href="{% static "distributedsocialnetwork/styles.css" %}">
 	{% block stylesheet %} {% endblock %}
 

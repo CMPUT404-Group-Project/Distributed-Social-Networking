@@ -40,8 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Custom Apps
+    'sass_processor',
     'author',
     'distributedsocialnetwork',
     'post',
@@ -142,10 +141,21 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'bootstrap/css'),
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'sass_processor.finders.CssFinder',
 ]
 
+SASS_PROCESSOR_INCLUDE_DIRS = [
+    os.path.join(BASE_DIR, 'bootstrap'),
+]
+
+
+SASS_PROCESSOR_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+SASS_PROCESSOR_ENABLED = True
+SASS_PROCESSOR_INCLUDE_FILE_PATTERN = r'^.+\.scss$'
+SASS_PRECISION = 8
 # env vars
 
 ENV = environ.Env(
