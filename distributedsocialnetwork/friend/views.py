@@ -72,7 +72,6 @@ def follow_author(request):
         current_user = request.user
         to_follow_id = request.POST["authorId"]
         to_follow = Author.objects.filter(id=to_follow_id)[0]
-        print(to_follow)
         FollowerManager.add_follower("", current_user, to_follow)
     return redirect(show_other)
 
