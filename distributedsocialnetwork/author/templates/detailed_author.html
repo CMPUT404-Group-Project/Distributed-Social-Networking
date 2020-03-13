@@ -1,7 +1,18 @@
 {% extends 'base.html' %} 
-
+{% load markup_tags %}
 {% block title %} {{ author.displayName }} {% endblock %}
-
+{% block stylesheet %}
+<style>
+  .markdown-content{
+    --primary-color: black;
+    --accent-color: black;
+}
+.markdown-content img{
+  max-width: 400px;
+  max-height: 500px;
+}
+</style> 
+{% endblock %}
 {% block content %}
 <div class="row p-0 m-0">
   <!-- Sidebar content -->
@@ -60,7 +71,11 @@
           </div>
         </a>
         <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
+        {% if post.contentType == 'text/markdown' %}
+        <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" }}</div>
+        {% else %}
         <p class="card-text">{{ post.content }}</p>
+        {% endif %}
       </div>
       <div class="card-footer text-muted text-right p-2">
         <p class="m-0">{{ post.author.first_name }} {{ post.author.last_name }}</p>

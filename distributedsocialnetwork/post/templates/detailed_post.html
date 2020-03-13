@@ -1,13 +1,11 @@
 {% extends 'base.html' %} 
-{% load markdown_deux_tags %}
+{% load markup_tags %}
 {% block title %} {{ post.title }} {% endblock %}
 {% block stylesheet %}
 <style>
   .markdown-content{
     --primary-color: black;
     --accent-color: black;
-    width: 100%;
-    max-width: 400px;
 }
 .markdown-content img{
   max-width: 400px;
@@ -43,7 +41,7 @@
           </a>
           <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
           {% if post.contentType == 'text/markdown' %}
-          <div class="markdown-content col-6">{{ post.content | markdown }}</div>
+          <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" }}</div>
           {% else %}
           <p class="card-text">{{ post.content }}</p>
           {% endif %}
@@ -60,7 +58,11 @@
       {% for comment in comments %}
       <div class="card m-4 comment">
         <div class="card-body">
+          {% if comment.contentType == 'text/markdown' %}
+          <div class="markdown-content col-6">{{ comment.comment | apply_markup:"markdown" }}</div>
+          {% else %}
           <p class="card-text">{{ comment.comment }}</p>
+          {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
           <p class="m-0">{{ comment.author.first_name }} {{ comment.author.last_name }}</p>

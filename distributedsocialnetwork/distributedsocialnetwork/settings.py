@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'friend',
-    "markdown_deux"
+    "django_markup"
 ]
 
 AUTH_USER_MODEL = 'author.Author'
