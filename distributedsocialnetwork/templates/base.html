@@ -32,7 +32,7 @@
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="nav-item">
-				{% block nav-profile%}<a class="nav-link" href="{% url 'update' %}">{{ request.user|title }}</a>{% endblock %}
+				{% block nav-profile%}<a class="nav-link" href="{{request.user.url}}">{{ request.user|title }}</a>{% endblock %}
 			</li>
 			<li class="nav-item">
 				{% block nav-logout%}<a class="nav-link" href="{% url 'logout' %}">Logout</a>{% endblock %}
