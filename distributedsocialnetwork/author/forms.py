@@ -49,6 +49,11 @@ class AuthorAuthenticationForm(forms.ModelForm):
         if self.is_valid():
             displayName = self.cleaned_data['displayName']
             password = self.cleaned_data['password']
-
-            if not authenticate(displayName=displayName, password=password):
-                raise forms.ValidationError("Invalid login.")
+            user = authenticate(displayName=displayName, password=password)
+            if user is not None:
+                if not user.is_active:
+                    raise forms.ValidationError(
+                        "Your account has not been activated please contact an admin.")
+            else:
+                raise forms.ValidationError(
+                    "Username or password is incorrect.")
