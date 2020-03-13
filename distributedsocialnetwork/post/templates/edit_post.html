@@ -1,0 +1,60 @@
+{% extends 'base.html' %} 
+
+{% block title %} Edit Post {% endblock %} 
+
+{% block content %}
+<!-- This is identical to create.html but with New Post instead, and the forms pre-filled -->
+<div class="row p-0 m-0">
+  <div class="col sidebar bg-light">
+      <!-- Left sidebar (no content) -->
+  </div>
+  <div class="col-8 stream bg-white pb-3" id="stream">
+    <!-- "stream" content (middle section)-->
+    <div class="row p-2 justify-content-left">
+      <h2>Edit Post</h2>
+    </div>
+    <form method="POST">
+      {% csrf_token %} 
+      {% for field in postCreationForm %}
+      <div class="card p-4">
+        <h3>{{field.label_tag}}</h3> {{field}} {% if field.help_text %}
+        <small style="color: gray;">
+          {field.help_text}}
+        </small>
+        {% endif %}
+      </div>
+      {% endfor %} {% for field in postCreationForm %}
+      {% for error in field.errors %}
+      <p style="color: red;">
+        {{error}}
+      </p>
+      {% endfor %} {% endfor %} {% if postCreationForm.non_field_errors %}
+      <div style="color: red">
+        <p>
+          {{postCreationForm.non_field_errors}}
+        </p>
+      </div>
+      {% endif %}
+    
+      <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Submit Post</button>
+    </form>
+  </div>
+  <div class="col text-right sidebar bg-light">
+    <!-- Right sidebar (no content) -->
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+  // Disabling the visibleTo field if it's not needed
+  // Thanks to user Praveen Kumar Purushothaman answering user french_dev's question on StackOverflow: https://stackoverflow.com/a/30867314
+  document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
+  document.getElementById("id_visibility").onchange = function () {
+    document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
+    if (this.value == 'PRIVATE'){
+      document.getElementById("id_visibleTo").removeAttribute("disabled");
+    }
+  };
+</script>
+{% endblock %}

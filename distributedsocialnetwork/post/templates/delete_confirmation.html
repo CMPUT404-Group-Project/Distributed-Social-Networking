@@ -1,0 +1,30 @@
+{% extends 'base.html' %} 
+
+{% block title %} {{ post.title }} {% endblock %}
+
+{% block content %}
+  <div class="row p-0 m-0">
+    <div class="col sidebar bg-light">
+      <!-- Left sidebar content goes here -->
+    </div>
+    <div class="col-8 stream bg-white pb-3" id="stream">
+      <!-- Main stream content goes here -->
+      <!-- The post -->
+      <div class=" text-center">
+        <h1>Delete Post</h2>
+        <h3>Are you <span style="font-weight: bold;">SURE</span> you want to delete this post?</h3>
+        <h3>Doing so will also delete {{comment_count}} comments.</h3>
+      </div>
+      {% if request.user.is_authenticated and request.user.id == post.author.id %}
+      <form method="POST">
+        {% csrf_token %} 
+        <button type="submit" class="btn btn-lg btn-block btn-outline-primary" style="--primary-color:red">Delete Post</button>
+      </form>
+      {% endif %}
+      <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{{post.source}}">Cancel</a>
+    </div>
+    <div class="col text-right sidebar bg-light">
+      <!-- Right sidebar content goes here -->
+    </div>
+  </div>
+{% endblock %}
