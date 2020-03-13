@@ -1,117 +1,177 @@
-{% extends 'base.html' %} 
-{% block title %} {{mode}} {% endblock %} 
+{% extends 'base.html' %}
 
+{% block nav-home %}
+<a class="nav-link" href="{% url 'home' %}">Home</a>
+{% endblock  %}
+
+{% block title %}Friends{% endblock %}
 {% block content %}
+<div class="row p-0 m-0">
+  <div class="col sidebar bg-light">
+    <div class="row justify-content-center">
+    </div>
+    {% if request.user.is_authenticated %}
+    <div class="row p-2 m-2 justify-content-center">
+        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{% url 'post:create' %}">Create</a>
+    </div>
+    <div class="row p-2 m-2 justify-content-center">
+        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="/friends">Friends</a>
+    </div>
+    {%endif%}
+  </div>
+    <div class="col-8 stream bg-white pb-3" >
+      <div class="row p-2 justify-content-left">
+        <h2>Pending Requests</h2>
+      </div>
+      {% if followers|length %}
+      {% for follower in followers %}
+      <div class="card m-2 post">
 
-<div class="row">
-        <div class="col-3"></div>
-        <div class="col-6 main" style="padding:0">
-            <div class="row follow-headers">
-                <div class="col-3 follow-header" id="friends-header" onclick="location.href='friends'">Friends</div>
-                <div class="col-3 follow-header" id="followers-header" onclick="location.href='pending'">Pending</div>
-                <div class="col-3 follow-header" id="following-header" onclick="location.href='following'">Following</div>
-                <div class="col-3 follow-header" id="others-header" onclick="location.href='other'">Other</div>
+        <div class="card-body row">
+
+          <div class="col-8">
+          <h5><span style="font-weight:bold">{{ follower.first_name }} {{follower.last_name}} </span> is following you, click accept to add them to your friends.</h5>
+          <a href="{{ follower.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ follower.displayName }}</h6></a>
+          </div>
+
+          <div class=" col-4">
+              <form method="post" action="reject" style="float:right">
+                      {% csrf_token %}
+                      <input type="hidden" name="authorId" value="{{follower.id}}">
+                      <button type="submit" class="btn btn-primary">Decline</button>
+                  </form>
+              <form method="post" action="accept" style="float:right;margin-right:2%">
+                  {% csrf_token %}
+                  <input type="hidden" name="authorId" value="{{follower.id}}">
+                  <button type="submit" class="btn btn-primary">Accept</button>
+              </form>
             </div>
-                <ul class="list-group">
-                    {% if authors|length %}
-                        {% for author in authors %}
-                        <li class="list-group-item">
-                                <div class="row follow">
-                                    <div class="col-8 follow-name">
-                                        <h5 style="margin:0">{{author.first_name}} {{author.last_name}}</h5>
-                                        <a href="{{author.url}}"><h6>@{{author.displayName}}</h6></a>
-                                        {% if mode == 'Pending' %}
-                                        <p style="margin:0">{{author.displayName}} is following you, click accept to add them to your friends.</p>
-                                        {% endif %}
-                                    </div>
-                                    {% if mode == 'Pending' %}
-                                    <div class="col-4 follow-button-container">
-                                        <form class='follow-button' method="post" action="reject">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="authorId" value="{{author.id}}">
-                                                <button type="submit" class="btn btn-primary">Decline</button>
-                                            </form>
-                                        <form class='follow-button' method="post" action="accept">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="authorId" value="{{author.id}}">
-                                            <button type="submit" class="btn btn-primary">Accept</button>
-                                        </form>
-                                    </div>
-                                    {% elif mode == 'Friends' %}
-                                    <div class="col-4 follow-button-container">
-                                        <form class='follow-button' method="post" action="unfriend">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="authorId" value="{{author.id}}">
-                                                <button type="submit" class="btn btn-primary">Remove Friend</button>
-                                        </form>
-                                    </div>
-                                    {% elif mode == 'Following' %}
-                                    <div class="col-4 follow-button-container">
-                                        <form class='follow-button' method="post" action="unfollow">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="authorId" value="{{author.id}}">
-                                                <button type="submit" class="btn btn-primary">Unfollow</button>
-                                        </form>
-                                            
-                                    </div>
-                                    {% elif mode == 'Others' %}
-                                    <div class="col-4 follow-button-container">
-                                        <form method="post" action="follow">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="authorId" value="{{author.id}}">
-                                                <button type="submit" class="btn btn-primary">Follow</button>
-                                        </form>
-                                    </div>
-                                    {% endif %}
-                                    
-                                </div>
-                            </li>
-                        {% endfor %}
-                    {% else %}
-                    <li class="list-group-item">
-                        {% if mode == 'Pending' %}
-                        <p style="margin:0">You have no pending friend requests.</p>
-                        {% elif mode == 'Friends' %}
-                        <p style="margin:0">You have no friends.</p>
-                        {% elif mode == 'Following' %}
-                        <p style="margin:0">You are not following anyone.</p>
-                        {% elif mode == 'Others' %}
-                        <p style="margin:0">There is no one here.</p>
-                        {% endif %}
-                    </li>
-                    {% endif %}
-                </ul>
+
         </div>
-        <div class="col-3"></div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="card m-2 post">
+          <div class="card-body row">
+            <div class="col">
+            <h5>You have no pending friend requests.</h5>
+            </div>
+          </div>
+      </div>
+      {% endif %}
+
+      <div class="row p-2 justify-content-left">
+          <h2>Following</h2>
+        </div>
+        {% if following|length %}
+        {% for follow in following %}
+      <div class="card m-2 post">
+          <div class="card-body row">
+            <div class="col-8">
+            <h5><span style="font-weight:bold">{{ follow.first_name }} {{follow.last_name}} </span></h5>
+            <a href="{{ follow.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ follow.displayName }}</h6></a>
+            </div>
+  
+            <div class=" col-4">
+                <form method="post" action="unfollow" style="float:right">
+                        {% csrf_token %}
+                        <input type="hidden" name="authorId" value="{{follow.id}}">
+                        <button type="submit" class="btn btn-primary">Unfollow</button>
+                    </form>
+              </div>
+  
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="card m-2 post">
+            <div class="card-body row">
+              <div class="col">
+              <h5>You are not following anyone.</h5>
+              </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row p-2 justify-content-left">
+            <h2>Friends</h2>
+          </div>
+          {% if friends|length %}
+          {% for friend in friends %}
+          <div class="card m-2 post">
+              <div class="card-body row">
+                <div class="col-8">
+                <h5><span style="font-weight:bold">{{ friend.first_name }} {{friend.last_name}} </span></h5>
+                <a href="{{ friend.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ friend.displayName }}</h6></a>
+                </div>
+      
+                <div class=" col-4">
+                    <form method="post" action="unfriend" style="float:right">
+                            {% csrf_token %}
+                            <input type="hidden" name="authorId" value="{{friend.id}}">
+                            <button type="submit" class="btn btn-primary">Remove Friend</button>
+                        </form>
+                  </div>
+              </div>
+            </div>
+          {% endfor %}
+          {% else %}
+          <div class="card m-2 post">
+              <div class="card-body row">
+                <div class="col">
+                <h5>You have no friends.</h5>
+                </div>
+              </div>
+          </div>
+          {% endif %}
+          
+          <div class="row p-2 justify-content-left">
+              <h2>Explore</h2>
+            </div>
+            {% if others|length %}
+            {% for other in others %}
+            <div class="card m-2 post">
+                <div class="card-body row">
+                  <div class="col-8">
+                  <h5><span style="font-weight:bold">{{ other.first_name }} {{other.last_name}} </span></h5>
+                  <a href="{{ other.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ other.displayName }}</h6></a>
+                  </div>
+                  <div class=" col-4">
+                      <form method="post" action="follow" style="float:right">
+                              {% csrf_token %}
+                              <input type="hidden" name="authorId" value="{{other.id}}">
+                              <button type="submit" class="btn btn-primary">Follow</button>
+                          </form>
+                    </div>
+                </div>
+              </div>
+            {% endfor %}
+            {% else %}
+            <div class="card m-2 post">
+                <div class="card-body row">
+                  <div class="col">
+                  <h5>There is no one else here.</h5>
+                  </div>
+                </div>
+            </div>
+          {% endif %}
+  </div>
+  <div class="col text-right sidebar bg-light">
+    <div class="row justify-content-center">
+      <h2>Featured Authors</h2>
+    </div>
+    {% for author in everyone %}
+    <div class="card m-2 featured-author">
+      <div class="card-body">
+        <a class="card-title" href="{{ author.url }}">
+          <div class="row-12">
+            <h5>{{ author }}</h5>
+          </div>
+        </a>
+        <p class="card-subtitle small">Last Online: {{ author.last_login }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
-
-{% if mode == 'Pending' %}
-<style>#followers-header{background-color: lightgrey}</style>
-{% elif mode == 'Friends' %}
-<style>#friends-header{background-color: lightgrey}</style>
-{% elif mode == 'Following' %}
-<style>#following-header{background-color: lightgrey}</style>
-{% elif mode == 'Others' %}
-<style>#others-header{background-color: lightgrey}</style>
-{% endif %}
-
-<style>
-    .follow-button{
-        float:right;
-        margin-right: 2%;
-    }
-    .follow-headers{
-        margin:0;
-        text-align:center;
-        font-size: 1.5em;
-        color:var(--primary-color);
-    }
-    .follow-header:hover {
-        background-color: lightgrey;
-    }
-    .follow-button-container{
-        margin: auto;
-        text-align: right;
-    }
-</style>
-{% endblock %}
+{% endblock content %}
