@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 
 # Create your views here.
 
+
 def show_friends(request):
     context = {}
     current_user = request.user
@@ -20,7 +21,7 @@ def show_friends(request):
     context['friends'] = friends
     context['followers'] = followers
     context['following'] = following
-    
+
     # non-fff
     everyone = Author.objects.all()
     fff = set([current_user] + followers + following + friends)
@@ -30,10 +31,10 @@ def show_friends(request):
             others.append(author)
     context['everyone'] = everyone
     context['others'] = others
-    print(friends, followers, following, others)
 
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
+
 
 def follow_author(request):
     # follow local author
