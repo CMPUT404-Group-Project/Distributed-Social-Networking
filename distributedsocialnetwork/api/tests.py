@@ -871,3 +871,33 @@ class FriendRequest(APITestCase):
         self.assertFalse(response.data["success"])
         self.assertTrue(response.data["message"].find(
             "incorrectly formatted"))
+
+
+class AuthorDetail(APITestCase):
+
+    def setUp(self):
+        # We create an author
+        self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
+                                             displayName="Author1", github="http://github.com/what", email="email1@mail.com")
+
+    def test_get_valid_uuid(self):
+        url = '/api/author/' + self.author1.id[29:]
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data["author"]["id"], self.author1.id)
+        self.assertEquals(
+            response.data["author"]["displayName"], self.author1.displayName)
+        self.assertEquals(response.data["author"]
+                          ["firstName"], self.author1.first_name)
+        self.assertEquals(response.data["author"]
+                          ["lastName"], self.author1.last_name)
+        self.assertEquals(response.data["author"]["email"], self.author1.email)
+        self.assertEquals(response.data["author"]["url"], self.author1.url)
+        self.assertEquals(response.data["author"]["host"], self.author1.host)
+        self.assertEquals(response.data["author"]
+                          ["github"], self.author1.github)
+
+    def test_get_invalid_uuid(self):
+        url = '/api/author/123456'
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, status.HTTP_404_NOT_FOUND)

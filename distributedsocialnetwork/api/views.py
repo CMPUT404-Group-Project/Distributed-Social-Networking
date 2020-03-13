@@ -536,3 +536,25 @@ class FriendRequest(APIView):
             "query": "friendrequest",
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+# ====== /api/author/{author_id}/ ======
+
+
+class AuthorDetail(APIView):
+
+    def get(self, request, pk):
+        # Returns the author object when requested
+        author = get_object_or_404(Author, id__icontains=pk)
+        response = {
+            "author": {
+                "id": author.id,
+                "displayName": author.displayName,
+                "firstName": author.first_name,
+                "lastName": author.last_name,
+                "email": author.email,
+                "url": author.url,
+                "host": author.host,
+                "github": author.github
+            }
+        }
+        return Response(response, status=status.HTTP_200_OK)
