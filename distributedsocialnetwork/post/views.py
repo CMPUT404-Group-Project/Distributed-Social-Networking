@@ -3,6 +3,8 @@ from django.urls import reverse_lazy
 from .forms import PostCreationForm, PostCommentForm
 from django.conf import settings
 from .models import Post, Comment
+from friend.models import Friend
+from author.models import Author
 import datetime
 import uuid
 # Create your views here.
@@ -52,10 +54,29 @@ def view_post(request, pk):
         form = PostCommentForm()
 
     context['post'] = get_object_or_404(Post, id=pk)
-    context['user'] = request.user
+    # Now that we have the post in the backend, we have to verify that the current user can see it.
+    post_visibility = context["post"].visibility
+    if post_visibility != "PUBLIC":
+        # Only certain people can see this post
+        if not request.user.is_authenticated:
+            return redirect(reverse_lazy('home'))
+        if post_visibility == "PRIVATE":
+            if request.user.id not in context["post"].visibleTo and request.user.id != context["post"].author_id:
+                return redirect(reverse_lazy('home'))
+        if post_visibility == "FOAF":
+            if request.user not in Friend.objects.get_foaf(
+                    get_object_or_404(Author, id=context["post"].author_id)) and request.user.id != context["post"].author_id:
+                return redirect(reverse_lazy('home'))
+        if post_visibility == "FRIENDS":
+            if request.user not in Friend.objects.get_friends(get_object_or_404(Author, id=context["post"].author_id)) and request.user.id != context["post"].author_id:
+                return redirect(reverse_lazy('home'))
+        if post_visibility == "SERVERONLY":
+            # For now, since these posts are only on one server, we ONLY check if they are friends
+            if request.user not in Friend.objects.get_friends(get_object_or_404(Author, id=context["post"].author_id)) and request.user.id != context["post"].author_id:
+                return redirect(reverse_lazy('home'))
+
     context['edit_url'] = request.get_full_path() + '/edit'
     context["request"] = request
-    # context['post'].content = context['post'].content.splitlines()
     context['postCommentForm'] = form
     context['comments'] = Comment.objects.filter(post_id=pk)
     return render(request, 'detailed_post.html', context)
@@ -91,3 +112,27 @@ def edit_post(request, pk):
 
     context['postCreationForm'] = form
     return render(request, 'edit_post.html', context)
+
+
+def delete_post(request, pk):
+    # This is a confirmation page to give the author one last chance to cancel the deletion of the post.
+    # We DO NOT want other users to be able to access this page and delete the posts of someone else
+    user = request.user
+    if not user.is_authenticated:
+        return redirect(reverse_lazy('login'))
+    post = get_object_or_404(Post, id=pk)
+    if not user.id == post.author_id:
+        # They have no business being here, leave please
+        return redirect(post.source)
+    if request.POST:
+        # They have opted to delete the post.
+        # For safety's sake, one last check to confirm they are the right user:
+        if request.user.id == post.author_id:
+            Post.objects.get(id=pk).delete()
+        return redirect(reverse_lazy('home'))
+    context = {}
+    context["request"] = request
+    context["post"] = post
+    comment_count = len(Comment.objects.filter(post_id=pk))
+    context["comment_count"] = comment_count
+    return render(request, 'delete_confirmation.html', context)
