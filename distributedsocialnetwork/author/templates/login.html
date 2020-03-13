@@ -6,34 +6,46 @@
 
 {% block content %}
 
-<h2>Sign In</h2>
-<form method="POST">
-    {% csrf_token %}
-
-    {% for field in loginForm %}
-    <p>
-        {{field.label_tag}}
-        {{field}}
-
-        {% if field.help_text %}
-        <small style="color: gray;">{{field.help_text}}</small>
-        {% endif %}
-    </p>
-    {% endfor %}
-
-    {% for field in loginForm %}
-    {% for error in field.errors %}
-    <p style="color: red;">{{error}}</p>
-    {% endfor %}
-    {% endfor %}
-
-    {% if loginForm.non_field_errors %}
-    <div style="color: red">
-        <p>{{loginForm.non_field_errors}}</p>
+<div class="row p-0 m-0">
+    <div class="col sidebar bg-light">
     </div>
-    {% endif %}
+    <div class="col-8 stream bg-white pb-3" id="stream">
+        <h2>Sign In</h2>
+        <form method="POST">
+            {% csrf_token %}
 
-    <button type="submit">Log In</button>
-</form>
+            {% for field in loginForm %}
+            <p>
+                <div class="row p-2">
+                    <div class="col-md-3">
+                    {{field.label_tag}}
+                    </div>
+                    <div class="col-md-9">
+                    {{field}}
+
+                    {% if field.help_text %}
+                    <small style="color: gray;">{{field.help_text}}</small>
+                    {% endif %}
+                    
+                    {% for error in field.errors %}
+                    <p style="color: red;">{{error}}</p>
+                    {% endfor %}
+                    </div>
+                </div>
+            </p>
+            {% endfor %}
+
+            {% if loginForm.non_field_errors %}
+            <div style="color: red">
+                <p>{{loginForm.non_field_errors}}</p>
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Sign In</button>
+        </form>
+    </div>
+    <div class="col text-right sidebar bg-light">
+
+    </div>
+</div>
 
 {% endblock  %}
