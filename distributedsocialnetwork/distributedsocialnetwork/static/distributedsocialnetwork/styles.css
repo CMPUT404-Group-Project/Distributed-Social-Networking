@@ -9,12 +9,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-main {
-  height: 100%;
-  width: 100%;
-  position: absolute;
-}
-
 .logo {
   position: absolute;
   margin: 0.75em 1.5em 1em 1.5em;
@@ -75,4 +69,8 @@ a {
 
 #stream {
   min-height: 90vh;
+}
+
+footer {
+  background-color: var(--primary-color);
 }
