@@ -11,6 +11,7 @@
 }
 .markdown-content img{
   max-width: 400px;
+  max-height: 500px;
 }
 </style> 
 {% endblock %}
@@ -42,7 +43,7 @@
           </a>
           <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
           {% if post.contentType == 'text/markdown' %}
-          <div class="markdown-content">{{ post.content | markdown }}</div>
+          <div class="markdown-content col-6">{{ post.content | markdown }}</div>
           {% else %}
           <p class="card-text">{{ post.content }}</p>
           {% endif %}
