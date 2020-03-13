@@ -1,9 +1,9 @@
 from django.shortcuts import render
-from friend.models import FollowerManager, FriendManager, Follower
-from author.models import Author
-from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.conf import settings
+from friend.models import FollowerManager, FriendManager, Follower
+from author.models import Author
 
 # Create your views here.
 
