@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from friend.models import FollowerManager, FriendManager, Follower
-from author.models import Author
-from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.conf import settings
+from friend.models import FollowerManager, FriendManager, Follower
+from author.models import Author
 
 # Create your views here.
+
 
 def show_friends(request):
     context = {}
@@ -20,7 +21,7 @@ def show_friends(request):
     context['friends'] = friends
     context['followers'] = followers
     context['following'] = following
-    
+
     # non-fff
     everyone = Author.objects.all()
     fff = set([current_user] + followers + following + friends)
@@ -30,10 +31,10 @@ def show_friends(request):
             others.append(author)
     context['everyone'] = everyone
     context['others'] = others
-    print(friends, followers, following, others)
 
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
+
 
 def follow_author(request):
     # follow local author
