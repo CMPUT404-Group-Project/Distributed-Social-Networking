@@ -19,6 +19,8 @@ class PostCreationForm(ModelForm):
         self.fields['visibleTo'].label = "Who Can See This Post (Private posts only, hold Shift/Ctrl to select more)"
         self.fields["contentType"].label = "Content Type"
         self.fields["categories"].label = "Categories (comma-separated)"
+        self.fields["categories"].required = False
+        self.fields["visibleTo"].required = False
 
     def clean_visibleTo(self):
         # We convert the selected authors into their ids and concatenate them into a commaseparated string
