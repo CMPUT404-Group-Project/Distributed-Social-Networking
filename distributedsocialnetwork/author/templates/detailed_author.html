@@ -7,6 +7,11 @@
   <!-- Sidebar content -->
   <div class="col sidebar bg-light">
     <!-- Sidebar Buttons go here -->
+    {% if request.user.is_authenticated and author.displayName == request.user.displayName %}
+    <div class="row p-2 m-2 justify-content-center">
+        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{% url 'update' %}">Edit Profile</a>
+    </div>
+    {% endif %}
     {% if friendrequest == "ENABLED" %}
     <!-- A form to send a friend request -->
     <form class='friendrequest-button' method="post">
@@ -76,11 +81,6 @@
   </div>
   <!-- Right sidebar (no content) -->
   <div class="col text-right sidebar bg-light">
-    {% if author.displayName == request.user.displayName %}
-    <div class="row p-2 m-2 justify-content-center">
-        <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{% url 'update' %}">Edit Profile</a>
-    </div>
-    {% endif %}
   </div>
 </div>
 {% endblock %}
