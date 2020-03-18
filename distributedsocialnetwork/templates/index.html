@@ -45,6 +45,10 @@
         <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
         {% if post.contentType == 'text/markdown' %}
         <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" |  truncatechars_html:500}}</div>
+        {% elif post.contentType == 'image/jpeg;base64' %}
+        <div class="card-text"><img src="data:image/jpeg;base64,{{ post.content }}"></div>
+        {% elif post.contentType == 'image/png;base64' %}
+        <div class="card-text"><img src="data:image/png;base64,{{ post.content }}"></div>
         {% else %}
         <p class="card-text">{{ post.content | truncatechars:500}}</p>
         {% endif %}
