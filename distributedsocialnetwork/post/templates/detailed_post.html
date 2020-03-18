@@ -65,6 +65,10 @@
         <div class="card-body">
           {% if comment.contentType == 'text/markdown' %}
           <div class="markdown-content col-6">{{ comment.comment | apply_markup:"markdown" }}</div>
+          {% elif comment.contentType == 'image/jpeg;base64' %}
+          <div class="card-text"><img src="data:image/jpeg;base64,{{ comment.comment }}"></div>
+          {% elif comment.contentType == 'image/png;base64' %}
+          <div class="card-text"><img src="data:image/png;base64,{{ comment.comment }}"></div>
           {% else %}
           <p class="card-text">{{ comment.comment }}</p>
           {% endif %}
