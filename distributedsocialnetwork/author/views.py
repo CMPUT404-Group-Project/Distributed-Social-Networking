@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.urls import reverse_lazy
+from django.http import HttpResponseNotFound
 
 from .forms import AuthorCreationForm, AuthorChangeForm, AuthorAuthenticationForm
 from .models import Author
@@ -84,8 +85,14 @@ def login_author(request):
 
 
 def logout_author(request):
-    logout(request)
-    return redirect(reverse_lazy('home'))
+    # Logout via a GET is problematic, despite Django doing so by default. So we now do so via POST.
+    if request.method == "POST":
+        if request.user.is_authenticated:
+            if request.user.displayName == request.POST.get("displayName"):
+                logout(request)
+        return redirect(reverse_lazy('home'))
+    # If someone tries to GET the page we return a 404
+    return HttpResponseNotFound()
 
 
 def view_author(request, pk):
