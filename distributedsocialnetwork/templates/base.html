@@ -43,7 +43,14 @@
 				{% block nav-profile%}<a class="nav-link" href="{{request.user.url}}">{{ request.user|title }}</a>{% endblock %}
 			</li>
 			<li class="nav-item">
-				{% block nav-logout%}<a class="nav-link" href="{% url 'logout' %}">Logout</a>{% endblock %}
+				<!-- We should be logging out via POST, so this is a simple form to do so -->
+				{% block nav-logout %}
+				<form method="post" action="{% url 'logout' %}" id="logout_form">
+					{% csrf_token %} 
+					<input type="hidden" name="displayName" value="{{request.user.displayName}}">
+					<button class="nav-link" type="submit" style="background-color: #1b359c;">Logout</button>
+				</form> 
+				{% endblock%}
 			</li>
 			{% else %}
 			<li class="nav-item">
