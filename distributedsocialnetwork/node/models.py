@@ -1,5 +1,7 @@
 from django.db import models
 from author.models import Author
+import random
+import string
 # Create your models here.
 
 
@@ -9,8 +11,11 @@ class NodeManager(models.Manager):
         username = obj_data["server_username"]
         password = obj_data["server_password"]
         hostname = obj_data["hostname"]
+        # Email has to be unique. So we generate a new email.
+        email = ''.join(random.choice(string.ascii_lowercase)
+                        for i in range(10)) + "@node.com"
         new_author = Author.objects.create_user(
-            displayName=username, password=password, first_name="NODE", last_name="NODE", email="node@node.com")
+            displayName=username, password=password, first_name="NODE", last_name="NODE", email=email)
         # We manually set some aspects of new_author
         new_author.host = hostname
         new_author.is_node = True
