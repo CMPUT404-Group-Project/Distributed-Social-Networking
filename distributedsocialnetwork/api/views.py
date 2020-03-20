@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.authentication import BasicAuthentication
 from post.models import Post, Comment
 from author.models import Author
 from friend.models import Friend, Follower
@@ -116,8 +117,9 @@ def comment_list_generator(request, query_set):
 
 
 class VisiblePosts(APIView):
-
+    permission_classes = ()
     # Returns a list of all public posts
+
     def get(self, request):
         response = {"query": "posts"}
         post_query_set = Post.objects.filter(visibility="PUBLIC")
