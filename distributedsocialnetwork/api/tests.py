@@ -8,6 +8,7 @@ from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
 from friend.models import Friend, Follower
+from django.conf import settings
 import urllib
 
 # Create your tests here.
@@ -23,8 +24,8 @@ class VisiblePosts(APITestCase):
         # Post 1
         self.post_id1 = uuid.uuid4().hex
         self.title1 = "Test1"
-        self.source1 = 'http://testcase1.com'
-        self.origin1 = 'http://testcase1.com/original'
+        self.source1 = settings.FORMATTED_HOST_NAME
+        self.origin1 = settings.FORMATTED_HOST_NAME
         self.description1 = 'Description1'
         self.contentType1 = "text/plain"
         self.content1 = "Content of the first test case post"
@@ -44,8 +45,8 @@ class VisiblePosts(APITestCase):
         # Post 2
         self.post_id2 = uuid.uuid4().hex
         self.title2 = "Test2"
-        self.source2 = 'http://testcase2.com'
-        self.origin2 = 'http://testcase2.com/original'
+        self.source2 = settings.FORMATTED_HOST_NAME
+        self.origin2 = settings.FORMATTED_HOST_NAME
         self.description2 = 'Description2'
         self.contentType2 = "text/plain"
         self.content2 = "Content of the first test case post"
@@ -65,8 +66,8 @@ class VisiblePosts(APITestCase):
         # Post 3 -- Private, so it shouldn't show
         self.post_id3 = uuid.uuid4().hex
         self.title3 = "Test3"
-        self.source3 = 'http://testcase3.com'
-        self.origin3 = 'http://testcase3.com/original'
+        self.source3 = settings.FORMATTED_HOST_NAME
+        self.origin3 = settings.FORMATTED_HOST_NAME
         self.description3 = 'Description3'
         self.contentType3 = "text/plain"
         self.content3 = "Content of the first test case post"
@@ -791,7 +792,10 @@ class FriendRequest(APITestCase):
         self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
 
-    def test_post_valid_format(self):
+    def test_post_valid_format_as_user(self):
+        # We are authenticating as a user in our database.
+        # Since author1 is the one sending it, we should authenticate as them.
+        self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
             "author": {
@@ -829,7 +833,8 @@ class FriendRequest(APITestCase):
         self.assertTrue(response.data["message"].find(
             "is already friends with"))
 
-    def test_post_invalid_format(self):
+    def test_post_invalid_format_as_user(self):
+        self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
             "author": {
@@ -871,6 +876,53 @@ class FriendRequest(APITestCase):
         self.assertFalse(response.data["success"])
         self.assertTrue(response.data["message"].find(
             "incorrectly formatted"))
+
+
+def test_post_valid_format_incorrect_user(self):
+    # We are authenticating as a user in our database, but not the right one
+    # Since author1 is the one sending it, we should authenticate as them.
+    self.client.force_authenticate(user=self.author2)
+    post_body = {
+        "query": "friendrequest",
+        "author": {
+            "id": self.author1.id,
+            "host": self.author1.host,
+            "displayName": self.author1.displayName,
+            "url": self.author1.url
+        },
+        "friend": {
+            "id": self.author2.id,
+            "host": self.author2.host,
+            "displayName": self.author2.displayName,
+            "url": self.author2.url
+        }
+    }
+    url = '/api/friendrequest'
+    response = self.client.post(url, post_body, format='json')
+    # Assert we got a 401, since we cannot do this action
+    self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+def test_no_authentication(self):
+    post_body = {
+        "query": "friendrequest",
+        "author": {
+            "id": self.author1.id,
+            "host": self.author1.host,
+            "displayName": self.author1.displayName,
+            "url": self.author1.url
+        },
+        "friend": {
+            "id": self.author2.id,
+            "host": self.author2.host,
+            "displayName": self.author2.displayName,
+            "url": self.author2.url
+        }
+    }
+    url = '/api/friendrequest'
+    response = self.client.post(url, post_body, format='json')
+    # Assert we got a 401, since we cannot do this action without authentication
+    self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class AuthorDetail(APITestCase):
