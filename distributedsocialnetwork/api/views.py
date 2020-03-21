@@ -187,8 +187,8 @@ class PostDetailView(APIView):
                             allowed = True
                         if post.visibility == "SERVERONLY" and request.user.host == get_object_or_404(Author, id=post.author_id).host:
                             allowed = True
-                        if post.visibility == "PRIVATE" and request.user.id in post.visibleTo:
-                            allowed = True
+                    if post.visibility == "PRIVATE" and request.user.id in post.visibleTo:
+                        allowed = True
                     if not allowed:
                         # They are not authenticated to see this post. We send a 401.
                         response = {
@@ -197,6 +197,14 @@ class PostDetailView(APIView):
                             "message": "You are not authenticated to see this post."
                         }
                         return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # they can't see this post
+                response = {
+                    "query": "posts",
+                    "success": False,
+                    "message": "You are not authenticated to see this post."
+                }
+                return Response(response, status=status.HTTP_401_UNAUTHORIZED)
         # If they get here with no issues, they can get sent the post.
         response = {"query": "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
@@ -216,7 +224,7 @@ class PostDetailView(APIView):
             post["next"] = comment_list_dict["next"]
             post["comments"] = comment_list_dict["comments"]
         response["posts"] = post_list_dict["posts"]
-        return Response(response)
+        return Response(response, status=status.HTTP_200_OK)
 
     def post(self, request, pk):
         # This is used for two different purposes:
@@ -514,7 +522,7 @@ class AuthorPosts(APIView):
                         foaf_posts = foaf_posts | Post.objects.filter(
                             visibility="FOAF", author=author_id)
                     # TODO: If they are FOAF.
-                post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
+                post_query_set = author_public_posts | author_private_posts | friend_posts | foaf_posts
 
         else:
             post_query_set = Post.objects.filter(
