@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'friend',
+    'node',
     "django_markup"
 ]
 
