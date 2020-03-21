@@ -8,6 +8,8 @@ from django.urls import reverse
 from author.models import Author
 from post.models import Post, Comment
 from friend.models import Friend, Follower
+from node.models import Node
+from django.conf import settings
 import urllib
 
 # Create your tests here.
@@ -23,8 +25,8 @@ class VisiblePosts(APITestCase):
         # Post 1
         self.post_id1 = uuid.uuid4().hex
         self.title1 = "Test1"
-        self.source1 = 'http://testcase1.com'
-        self.origin1 = 'http://testcase1.com/original'
+        self.source1 = settings.FORMATTED_HOST_NAME
+        self.origin1 = settings.FORMATTED_HOST_NAME
         self.description1 = 'Description1'
         self.contentType1 = "text/plain"
         self.content1 = "Content of the first test case post"
@@ -44,8 +46,8 @@ class VisiblePosts(APITestCase):
         # Post 2
         self.post_id2 = uuid.uuid4().hex
         self.title2 = "Test2"
-        self.source2 = 'http://testcase2.com'
-        self.origin2 = 'http://testcase2.com/original'
+        self.source2 = settings.FORMATTED_HOST_NAME
+        self.origin2 = settings.FORMATTED_HOST_NAME
         self.description2 = 'Description2'
         self.contentType2 = "text/plain"
         self.content2 = "Content of the first test case post"
@@ -65,8 +67,8 @@ class VisiblePosts(APITestCase):
         # Post 3 -- Private, so it shouldn't show
         self.post_id3 = uuid.uuid4().hex
         self.title3 = "Test3"
-        self.source3 = 'http://testcase3.com'
-        self.origin3 = 'http://testcase3.com/original'
+        self.source3 = settings.FORMATTED_HOST_NAME
+        self.origin3 = settings.FORMATTED_HOST_NAME
         self.description3 = 'Description3'
         self.contentType3 = "text/plain"
         self.content3 = "Content of the first test case post"
@@ -146,16 +148,24 @@ class VisiblePosts(APITestCase):
 
 class PostDetailView(APITestCase):
     def setUp(self):
-        self.testUserId = 'http://testserver.com/author/' + \
+        self.testUserId = settings.FORMATTED_HOST_NAME + \
             str(uuid.uuid4().hex)
-        self.testAuthor = Author.objects.create(id=self.testUserId, host="http://google.com", url="http://url.com",
+        self.foreignAuthorId = 'http://foreignsite.com/author/' + \
+            str(uuid.uuid4().hex)
+        self.testAuthor = Author.objects.create(id=self.testUserId, host=settings.FORMATTED_HOST_NAME, url=settings.FORMATTED_HOST_NAME,
                                                 displayName="Testmaster", github="http://github.com/what")
+        # We also want an author from another server, and a node with which to authenticate
+        self.foreignAuthor = Author.objects.create(
+            id=self.foreignAuthorId, host="http://foreignsite.com", url="http://foreignsite.com", displayName="ForeignAuthor", github="", email="wahtever@email.com")
+        self.node = Node.objects.create(hostname="http://foreignsite.com",
+                                        api_url="http://foreignsite.com", server_username="node", server_password="node")
+        self.node_author = Author.objects.get(displayName="node")
         # Post 1
         self.post_id1_string = 'de305d54-75b4-431b-adb2-eb6b9e546013'
         self.post_id1 = uuid.UUID('de305d54-75b4-431b-adb2-eb6b9e546013')
         self.title1 = "Test1"
-        self.source1 = 'http://testcase1.com'
-        self.origin1 = 'http://testcase1.com/original'
+        self.source1 = settings.FORMATTED_HOST_NAME
+        self.origin1 = settings.FORMATTED_HOST_NAME
         self.description1 = 'Description1'
         self.contentType1 = "text/plain"
         self.content1 = "Content of the first test case post"
@@ -171,6 +181,12 @@ class PostDetailView(APITestCase):
                             description=self.description1, contentType=self.contentType1,
                             content=self.content1, author=self.author1, categories=self.categories1,
                             published=self.published1, visibility=self.visibility1, unlisted=self.unlisted1)
+        # Post 2
+        # This one is a private post, which the foreign user can see.
+        self.post2 = Post.objects.create(id=uuid.UUID("73cc3f3c-0654-493f-a529-72413297ba55"), title="Test2",
+                                         source=settings.FORMATTED_HOST_NAME, description="Description2", contentType="text/plain", content="Test content",
+                                         author=self.author1, categories="",
+                                         published=datetime.datetime(2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.foreignAuthorId, unlisted=False)
         # POST data, this is a valid post
         self.post_data = {
             "query": "addPost",
@@ -227,6 +243,22 @@ class PostDetailView(APITestCase):
         # Test that there is a list of comments
         self.assertEqual(response.data["posts"][0]["next"],
                          'http://testserver' + url + '/comments')
+
+    def test_get_private(self):
+        # We should not be able to get the post without authenticating
+        url = '/api/posts/' + str(self.post2.id)
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # We should be able to authenticate as a node and get the private post
+        self.client.force_authenticate(user=self.node_author)
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["posts"]), 1)
+        # We should also be able to see the post when authenticated as a user
+        self.client.force_authenticate(user=self.foreignAuthor)
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["posts"]), 1)
 
     def test_post_to_existing_uri(self):
         # This should fail
@@ -543,7 +575,13 @@ class AuthUserPosts(APITestCase):
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
         self.author3 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author3", github="http://github.com/what", email="email3@mail.com", password="foo")
-
+        # We will also make another author who is from a foreign server.
+        self.foreignAuthor = Author.objects.create(
+            id="http://foreignsite.com/author/" + str(uuid.uuid4().hex), host="http://foreignsite.com", url="http://foreignsite.com", displayName="ForeignAuthor", github="", email="wahtever@email.com")
+        # And we also make a Node with which to authenticate this author
+        self.node = Node.objects.create(hostname="http://foreignsite.com",
+                                        api_url="http://foreignsite.com", server_username="node", server_password="node")
+        self.node_author = Author.objects.get(displayName="node")
         # We will make some friends here:
         # Author 1 will be friends with Author 2
         # Author 2 will be friends with Author 3
@@ -551,47 +589,47 @@ class AuthUserPosts(APITestCase):
         Friend.objects.add_friend(self.author2, self.author3)
 
         # First post will be a public post written by author 1
-        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
+        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://firstpost.com/origin", description="This is the first post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
 
-        # Second post will be a private post written by author 1, shared with author 2
-        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source="http:secondpost.com",
+        # Second post will be a private post written by author 1, shared with author 2 and the foreign author
+        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://secondpost.com/origin", description="This is the second post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.author2.id, unlisted=False)
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=str(self.author2.id) + ',' + str(self.foreignAuthor.id), unlisted=False)
 
         # Third post will be a public post written by author 2
-        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source="http:thirdpost.com",
+        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://thirdpost.com/origin", description="This is the third post",
                                          author=self.author2, categories="", published=datetime.datetime(
             2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Fourth post will be a private post written by author 1, but NOT shared with author 2
-        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source="http:fourthpost.com",
+        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
 
         # Fifth post will be a post set to serveronly visibility by author 1. Only authors 1 and 2 should be able to see it.
-        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source="http:fourthpost.com",
+        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
 
         # Sixth post will be a post set to friend-only visibility by author1. Author 1 and 2 should be able to see it.
-        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source="http:fourthpost.com",
+        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
         # Seventh post will be a FOAF post by author1. Everyone should be able to see it.
-        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source="http:fourthpost.com",
+        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
 
-    def test_get_list(self):
+    def test_get_list_as_user(self):
         url = reverse('auth-posts')
         response = self.client.get(url, format='json')
         # Without authenticating, we should be able to retrieve 2 posts
@@ -612,6 +650,13 @@ class AuthUserPosts(APITestCase):
         # They should be able to retrieve 3 posts
         self.assertEqual(len(response.data["posts"]), 3)
 
+    def test_get_list_as_node(self):
+        url = reverse('auth-posts')
+        self.client.force_authenticate(user=self.node_author)
+        response = self.client.get(url, format='json')
+        # They should be able to see 3 posts.
+        self.assertEqual(len(response.data["posts"]), 3)
+
 
 class AuthorPosts(APITestCase):
 
@@ -621,43 +666,50 @@ class AuthorPosts(APITestCase):
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
         self.author1 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex), host="http://google.com", url="http://url.com",
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com", password="foo")
+        # We will also make another author who is from a foreign server.
+        self.foreignAuthor = Author.objects.create(
+            id="http://foreignsite.com/author/" + str(uuid.uuid4().hex), host="http://foreignsite.com", url="http://foreignsite.com", displayName="ForeignAuthor", github="", email="wahtever@email.com")
+        # And we also make a Node with which to authenticate this author
+        self.node = Node.objects.create(hostname="http://foreignsite.com",
+                                        api_url="http://foreignsite.com", server_username="node", server_password="node")
+        self.node_author = Author.objects.get(displayName="node")
         #  We will make them friends.
         Friend.objects.add_friend(self.author1, self.author2)
         # First post will be a public post written by author 1
-        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source="http:firstpost.com",
+        self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://firstpost.com/origin", description="This is the first post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
 
-        # Second post will be a private post written by author 1, shared with author 2
-        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source="http:secondpost.com",
+        # Second post will be a private post written by author 1, shared with author 2 and the foreign author
+        self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://secondpost.com/origin", description="This is the second post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.author2.id, unlisted=False)
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=str(self.author2.id)+','+str(self.foreignAuthor.id), unlisted=False)
 
         # Third post will be a public post written by author 2
-        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source="http:thirdpost.com",
+        self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://thirdpost.com/origin", description="This is the third post",
                                          author=self.author2, categories="", published=datetime.datetime(
             2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Fourth post will be a private post written by author 1, but NOT shared with author 2
-        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source="http:fourthpost.com",
+        self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
         # Fifth post will be a post written by author1 visible only to friends on the server
-        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source="http:fourthpost.com",
+        self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
         # Sixth post will be written by author1 visible only to friends
-        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source="http:fourthpost.com",
+        self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
         # Seventh post will be written by author1 visible only to FOAF
-        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source="http:fourthpost.com",
+        self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
@@ -678,6 +730,10 @@ class AuthorPosts(APITestCase):
         response = self.client.get(url, format='json')
         # We should be seeing 6 posts
         self.assertEqual(len(response.data["posts"]), 6)
+        # If we log in as the foreign author, we should be able to retrieve 2 posts
+        self.client.force_authenticate(user=self.node_author)
+        response = self.client.get(url, format='json')
+        self.assertEqual(len(response.data["posts"]), 2)
 
 
 class AuthorFriendsList(APITestCase):
@@ -790,8 +846,18 @@ class FriendRequest(APITestCase):
                                              displayName="Author1", github="http://github.com/what", email="email1@mail.com")
         self.author2 = Author.objects.create(id='http://testserver.com/author/' + str(uuid.uuid4().hex),
                                              displayName="Author2", first_name="Author", last_name="Two", email="email@mailtoot.com")
+        # We will also make another author who is from a foreign server.
+        self.foreignAuthor = Author.objects.create(
+            id="http://foreignsite.com/author/" + str(uuid.uuid4().hex), host="http://foreignsite.com", url="http://foreignsite.com", displayName="ForeignAuthor", github="", email="wahtever@email.com")
+        # And we also make a Node with which to authenticate this author
+        self.node = Node.objects.create(hostname="http://foreignsite.com",
+                                        api_url="http://foreignsite.com", server_username="node", server_password="node")
+        self.node_author = Author.objects.get(displayName="node")
 
-    def test_post_valid_format(self):
+    def test_post_valid_format_as_user(self):
+        # We are authenticating as a user in our database.
+        # Since author1 is the one sending it, we should authenticate as them.
+        self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
             "author": {
@@ -829,7 +895,47 @@ class FriendRequest(APITestCase):
         self.assertTrue(response.data["message"].find(
             "is already friends with"))
 
-    def test_post_invalid_format(self):
+    def test_valid_format_as_node(self):
+        self.client.force_authenticate(user=self.node_author)
+        post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.foreignAuthor.id,
+                "host": self.foreignAuthor.host,
+                "displayName": self.foreignAuthor.displayName,
+                "url": self.foreignAuthor.url
+            },
+            "friend": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            }
+        }
+        url = '/api/friendrequest'
+        response = self.client.post(url, post_body, format='json')
+        # Assert we got a 200 OK, and that it was a success
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        # Assert that it is in the db
+        self.assertTrue(Follower.objects.is_following(
+            self.foreignAuthor, self.author2))
+        # if we send it again, it should return a 400
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "has already sent a friend request to"))
+        # If we make them friends, it should return a 400
+        Friend.objects.add_friend(self.foreignAuthor, self.author2)
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertTrue(response.data["message"].find(
+            "is already friends with"))
+
+    def test_post_invalid_format_as_user(self):
+        self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
             "author": {
@@ -871,6 +977,53 @@ class FriendRequest(APITestCase):
         self.assertFalse(response.data["success"])
         self.assertTrue(response.data["message"].find(
             "incorrectly formatted"))
+
+
+def test_post_valid_format_incorrect_user(self):
+    # We are authenticating as a user in our database, but not the right one
+    # Since author1 is the one sending it, we should authenticate as them.
+    self.client.force_authenticate(user=self.author2)
+    post_body = {
+        "query": "friendrequest",
+        "author": {
+            "id": self.author1.id,
+            "host": self.author1.host,
+            "displayName": self.author1.displayName,
+            "url": self.author1.url
+        },
+        "friend": {
+            "id": self.author2.id,
+            "host": self.author2.host,
+            "displayName": self.author2.displayName,
+            "url": self.author2.url
+        }
+    }
+    url = '/api/friendrequest'
+    response = self.client.post(url, post_body, format='json')
+    # Assert we got a 401, since we cannot do this action
+    self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+def test_no_authentication(self):
+    post_body = {
+        "query": "friendrequest",
+        "author": {
+            "id": self.author1.id,
+            "host": self.author1.host,
+            "displayName": self.author1.displayName,
+            "url": self.author1.url
+        },
+        "friend": {
+            "id": self.author2.id,
+            "host": self.author2.host,
+            "displayName": self.author2.displayName,
+            "url": self.author2.url
+        }
+    }
+    url = '/api/friendrequest'
+    response = self.client.post(url, post_body, format='json')
+    # Assert we got a 401, since we cannot do this action without authentication
+    self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class AuthorDetail(APITestCase):
