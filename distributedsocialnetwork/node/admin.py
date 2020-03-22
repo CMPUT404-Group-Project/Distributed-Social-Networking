@@ -10,10 +10,10 @@ class NodeAdmin(admin.ModelAdmin):
     # Our Node form in the admin panel
     model = Node
     list_display = ["server_username",
-                    "server_password", "hostname", "api_url"]
+                    "server_password", "hostname", "api_url", "node_auth_username", "node_auth_password"]
     readonly_fields = ['auth_user']
     fields = [('auth_user'), ("server_username"),
-              ("server_password"), ("hostname"), ("api_url")]
+              ("server_password"), ("hostname"), ("api_url"), ("node_auth_username"), ("node_auth_password")]
 
     def save_model(self, request, obj, form, change):
         # We need to create a new Author object and such

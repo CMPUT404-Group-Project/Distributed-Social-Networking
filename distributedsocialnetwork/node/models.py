@@ -37,5 +37,8 @@ class Node(models.Model):
     api_url = models.URLField()  # The url for their REST API
     server_username = models.CharField(max_length=100)
     server_password = models.CharField(max_length=100)
+    # These next two are OUR credentials for logging into this server.
+    node_auth_username = models.CharField(max_length=100, default="")
+    node_auth_password = models.CharField(max_length=100, default="")
 
     objects = NodeManager()
