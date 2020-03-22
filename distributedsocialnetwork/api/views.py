@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.authentication import BasicAuthentication
 from post.models import Post, Comment
 from author.models import Author
 from friend.models import Friend, Follower
@@ -9,6 +10,8 @@ from django.core.paginator import Paginator
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
 import urllib
+from django.conf import settings
+
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -114,13 +117,17 @@ def comment_list_generator(request, query_set):
         "comments": comment_serializer.data
     }
 
+# ====== /api/posts ======
+
 
 class VisiblePosts(APIView):
-
     # Returns a list of all public posts
+
     def get(self, request):
         response = {"query": "posts"}
-        post_query_set = Post.objects.filter(visibility="PUBLIC")
+        # No auth required. Send the public posts originating from this server.
+        post_query_set = Post.objects.filter(
+            visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -146,9 +153,60 @@ class VisiblePosts(APIView):
 class PostDetailView(APIView):
     # Retrieving the detailed view of a single post
     # The example article says this needs to be a list of one.
+    # If this post is not Public or Unlisted, we should be authenticating in order to see it
     def get(self, request, pk):
-        response = {"query": "posts"}
         post_query_set = Post.objects.filter(id=pk)
+        post = post_query_set[0]
+        if post.visibility != "PUBLIC":
+            # We can't just send it, we have to check their authentication
+            if request.user.is_authenticated:
+                # We can send them the post if they are.
+                if request.user.is_node:
+                    # They are another server, so we send the post details only if one of their users are able to see it
+                    has_allowed_user = False
+                    for author in list(Author.objects.filter(host=request.user.host)):
+                        if Friend.objects.are_friends(author, get_object_or_404(Author, id=post.author.id)):
+                            if post.visibility == "FRIENDS" or post.visibility == "FOAF":
+                                has_allowed_user = True
+                        if author.id in post.visibleTo and post.visibility == "PRIVATE":
+                            has_allowed_user = True
+                        # TODO: FOAF
+                    if not has_allowed_user:
+                        # They are not authenticated to see this post. We send a 401.
+                        response = {
+                            "query": "posts",
+                            "success": False,
+                            "message": "You are not authenticated to see this post."
+                        }
+                        return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+                else:
+                    # They are a user, so they can see the post if they are properly authenticated
+                    allowed = False
+                    if Friend.objects.are_friends(request.user, get_object_or_404(Author, id=post.author_id)):
+                        if post.visibility == "FRIENDS" or post.visibility == "FOAF":
+                            allowed = True
+                        if post.visibility == "SERVERONLY" and request.user.host == get_object_or_404(Author, id=post.author_id).host:
+                            allowed = True
+                    if post.visibility == "PRIVATE" and request.user.id in post.visibleTo:
+                        allowed = True
+                    if not allowed:
+                        # They are not authenticated to see this post. We send a 401.
+                        response = {
+                            "query": "posts",
+                            "success": False,
+                            "message": "You are not authenticated to see this post."
+                        }
+                        return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # they can't see this post
+                response = {
+                    "query": "posts",
+                    "success": False,
+                    "message": "You are not authenticated to see this post."
+                }
+                return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+        # If they get here with no issues, they can get sent the post.
+        response = {"query": "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -166,7 +224,7 @@ class PostDetailView(APIView):
             post["next"] = comment_list_dict["next"]
             post["comments"] = comment_list_dict["comments"]
         response["posts"] = post_list_dict["posts"]
-        return Response(response)
+        return Response(response, status=status.HTTP_200_OK)
 
     def post(self, request, pk):
         # This is used for two different purposes:
@@ -176,7 +234,7 @@ class PostDetailView(APIView):
         # The documentation does not specify what the POSTing a Post is supposed to look like.
         # So I assume it is similar to posting a comment.
         if 'application/json' in request.headers["Content-Type"]:
-            if request.data["query"] == "friends":
+            if request.data["query"] == "getPost":
                 # FOAF stuff to be added here (once we have friends)
                 pass
             try:
@@ -351,18 +409,41 @@ class AuthUserPosts(APIView):
         # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
         response = {'query': "posts"}
         if request.user.is_authenticated:
-            # The user is logged in, so we send them all posts they can see
-            public_posts = Post.objects.filter(visibility="PUBLIC")
-            user_posts = Post.objects.filter(author=request.user)
-            privated_posts = Post.objects.filter(
-                visibility="PRIVATE", visibleTo__icontains=request.user.id)
-            serveronly_posts = Post.objects.filter(
-                visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
-            friend_posts = Post.objects.filter(
-                visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
-            foaf_posts = Post.objects.filter(
-                visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
-            post_query_set = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
+            # We now have two different options in regards to who is authenticated.
+            # 1. A user from our server
+            # 2. A Node, aka another server.
+            if not request.user.is_node:
+                # ++++++++++++++++++++ Author from our own server is logged in +++++++++++++++++++++++
+                # The user is logged in, so we send them all posts they can see
+                public_posts = Post.objects.filter(visibility="PUBLIC")
+                user_posts = Post.objects.filter(author=request.user)
+                privated_posts = Post.objects.filter(
+                    visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                serveronly_posts = Post.objects.filter(
+                    visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
+                friend_posts = Post.objects.filter(
+                    visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
+                foaf_posts = Post.objects.filter(
+                    visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
+                post_query_set = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
+            else:
+                # ++++++++++++++++++++ A Node is logged in +++++++++++++++++++++++++++++++++++++++++++
+                # We pass over the posts that all of THEIR users can see
+                # We assume that we currently have their users stored in our system.
+                hostname = settings.FORMATTED_HOST_NAME
+                public_posts = Post.objects.filter(
+                    visibility="PUBLIC", source__icontains=hostname)
+                privated_posts = Post.objects.none()
+                friend_posts = Post.objects.none()
+                foaf_posts = Post.objects.none()
+                for author in list(Author.objects.filter(host=request.user.host)):
+                    # For each author belonging to that server, we add the posts they are able to see
+                    privated_posts = privated_posts | Post.objects.filter(
+                        visibility="PRIVATE", visibleTo__icontains=author.id)
+                    friend_posts = friend_posts | Post.objects.filter(
+                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author))
+                    # TODO: FOAF
+                post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(visibility="PUBLIC")
@@ -396,26 +477,52 @@ class AuthorPosts(APIView):
         author_id = author.id
         response = {"query": "posts"}
         if request.user.is_authenticated:
-            if author_id == request.user.id:
-                # This is the author, they should be able to see all their posts
-                post_query_set = Post.objects.filter(author=author_id)
+            # We now have two different options in regards to who is authenticated.
+            # 1. A user from our server
+            # 2. A Node, aka another server.
+            if not request.user.is_node:
+                # ++++++++++++++++++++ Author from our own server is logged in +++++++++++++++++++++++
+                if author_id == request.user.id:
+                    # This is the author, they should be able to see all their posts
+                    post_query_set = Post.objects.filter(author=author_id)
+                else:
+                    # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
+                    author_public_posts = Post.objects.filter(
+                        author=author_id, visibility="PUBLIC")
+                    author_private_posts = Post.objects.filter(
+                        author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                    post_query_set = author_public_posts | author_private_posts
+                    if Friend.objects.are_friends(request.user, author):
+                        # We can send them a few things
+                        serveronly_posts = Post.objects.filter(
+                            visibility="SERVERONLY", author=author_id)
+                        friend_posts = Post.objects.filter(
+                            visibility="FRIENDS", author=author_id)
+
+                        foaf_posts = Post.objects.filter(
+                            visibility="FOAF", author=author_id)
+                        post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
             else:
-                # The user is logged in, so we return all public posts and private posts they have been shared with posted by this author
+                # ++++++++++++++++++++ A Node is logged in +++++++++++++++++++++++++++++++++++++++++++
+                # We pass over the posts that all of THEIR users can see
+                # We assume that we currently have their users stored in our system.
+                # We also assume they will not be querying their own user's posts
                 author_public_posts = Post.objects.filter(
                     author=author_id, visibility="PUBLIC")
-                author_private_posts = Post.objects.filter(
-                    author=author_id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
-                post_query_set = author_public_posts | author_private_posts
-                if Friend.objects.are_friends(request.user, author):
-                    # We can send them a few things
-                    serveronly_posts = Post.objects.filter(
-                        visibility="SERVERONLY", author=author_id)
-                    friend_posts = Post.objects.filter(
-                        visibility="FRIENDS", author=author_id)
-
-                    foaf_posts = Post.objects.filter(
-                        visibility="FOAF", author=author_id)
-                    post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
+                author_private_posts = Post.objects.none()
+                friend_posts = Post.objects.none()
+                foaf_posts = Post.objects.none()
+                for foreign_author in list(Author.objects.filter(host=request.user.host)):
+                    # For each author belonging to that server, we add the posts they are able to see
+                    author_private_posts = author_private_posts | Post.objects.filter(
+                        visibility="PRIVATE", author=author_id, visibleTo__icontains=foreign_author.id)
+                    if Friend.objects.are_friends(author, foreign_author):
+                        friend_posts = friend_posts | Post.objects.filter(
+                            visibility="FRIENDS", author=author_id)
+                        foaf_posts = foaf_posts | Post.objects.filter(
+                            visibility="FOAF", author=author_id)
+                    # TODO: If they are FOAF.
+                post_query_set = author_public_posts | author_private_posts | friend_posts | foaf_posts
 
         else:
             post_query_set = Post.objects.filter(
@@ -446,7 +553,6 @@ class AuthorFriendsList(APIView):
 
     def get(self, request, pk):
         # A GET request returns the list of this Author's current friends
-        # We are using the django-friendship libary that handles these relationships for us
         response = {"query": "friends"}
         author = get_object_or_404(Author, id__icontains=pk)
         friends = Friend.objects.get_friends(author=author)
@@ -499,8 +605,51 @@ class AreAuthorsFriends(APIView):
 class FriendRequest(APIView):
     def post(self, request):
         # We want to send a friend request from the "author" to the "friend"
+        # First off -- are they authenticated?
+        if not request.user.is_authenticated:
+            return Response({
+                "query": "friendrequest",
+                "success": False,
+                "message": "Authentication is required for this endpoint."
+            }, status=status.HTTP_401_UNAUTHORIZED)
         if 'application/json' in request.headers["Content-Type"]:
             try:
+                if len(Author.objects.filter(id=request.data["author"]["id"])) != 1:
+                    # Author does not exist in our db.
+                    # If the host is different, we add it to the database.
+                    # Else, we return a 400, because you should not use this to create authors with the same host
+                    if request.user.is_node:
+                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and request.data["author"]["host"] == request.user.host:
+                            author = request.data["author"]
+                            Author.objects.update_or_create(
+                                id=author["id"], host=author["host"], displayName=author["displayName"], url=author["url"], github=author["github"])
+                    else:
+                        # We send a 400
+                        return Response({
+                            "query": "friendrequest",
+                            "success": False,
+                            "message": "User sending the request does not exist."
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    # Author already exists in our system.
+                    # If the user is an author, we can send the friend request if they are the one sending it
+                    # If the user is a node, we send the friend request if they have the same host as the one sending it
+                    if request.user.is_node:
+                        if request.data["author"]["host"] != request.user.host:
+                            # We send a 401. They can't send requests on behalf of users from other hosts.
+                            return Response({
+                                "query": "friendrequest",
+                                "success": False,
+                                "message": "You cannot send a friend request on behalf of a user from another service."
+                            }, status=status.HTTP_401_UNAUTHORIZED)
+                    else:
+                        # A user is authenticated. It must be the author sending the request.
+                        if request.user.id != request.data["author"]["id"]:
+                            return Response({
+                                "query": "friendrequest",
+                                "success": False,
+                                "message": "You cannot send a friend request on behalf of another user."
+                            }, status=status.HTTP_401_UNAUTHORIZED)
                 author = get_object_or_404(
                     Author, id=request.data["author"]["id"])
                 friend = get_object_or_404(

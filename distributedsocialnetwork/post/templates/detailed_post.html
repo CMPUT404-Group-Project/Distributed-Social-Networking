@@ -1,7 +1,19 @@
 {% extends 'base.html' %} 
-
+{% load markup_tags %}
 {% block title %} {{ post.title }} {% endblock %}
-
+{% block stylesheet %}
+<style>
+  .markdown-content{
+    --primary-color: black;
+    --accent-color: black;
+    
+}
+  img{
+  max-width: 400px;
+  max-height: 500px;
+}
+</style> 
+{% endblock %}
 {% block content %}
   <div class="row p-0 m-0">
     <div class="col sidebar bg-light">
@@ -29,7 +41,15 @@
             </div>
           </a>
           <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
+          {% if post.contentType == 'text/markdown' %}
+          <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" }}</div>
+          {% elif post.contentType == 'image/jpeg;base64' %}
+          <div class="card-text"><img src="data:image/jpeg;base64,{{ post.content }}"></div>
+          {% elif post.contentType == 'image/png;base64' %}
+          <div class="card-text"><img src="data:image/png;base64,{{ post.content }}"></div>
+          {% else %}
           <p class="card-text">{{ post.content }}</p>
+          {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
           <p class="m-0">{{ post.author.first_name }} {{ post.author.last_name }}</p>
@@ -43,7 +63,15 @@
       {% for comment in comments %}
       <div class="card m-4 comment">
         <div class="card-body">
+          {% if comment.contentType == 'text/markdown' %}
+          <div class="markdown-content col-6">{{ comment.comment | apply_markup:"markdown" }}</div>
+          {% elif comment.contentType == 'image/jpeg;base64' %}
+          <div class="card-text"><img src="data:image/jpeg;base64,{{ comment.comment }}"></div>
+          {% elif comment.contentType == 'image/png;base64' %}
+          <div class="card-text"><img src="data:image/png;base64,{{ comment.comment }}"></div>
+          {% else %}
           <p class="card-text">{{ comment.comment }}</p>
+          {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
           <p class="m-0">{{ comment.author.first_name }} {{ comment.author.last_name }}</p>
