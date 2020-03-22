@@ -316,14 +316,24 @@ class PostDetailView(APIView):
     def delete(self, request, pk):
         # Deleting the post that is at this URI and any associated comments.
         try:
-            deleted = Post.objects.filter(id=pk).delete()
-            deleted_dict = deleted[1]
-            deleted_comments = deleted_dict['post.Comment']
-            return Response({
-                "query": "deletePost",
-                "success": True,
-                "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
-            })
+            post_query_set = Post.objects.filter(id=pk)
+            post = post_query_set[0]
+            if request.user.is_authenticated:
+                if (request.user.id == post.author.id):
+                    deleted = post.delete()
+                    deleted_dict = deleted[1]
+                    deleted_comments = deleted_dict['post.Comment']
+                    return Response({
+                        "query": "deletePost",
+                        "success": True,
+                        "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
+                    })
+            response = {
+                    "query": "deletePost",
+                    "success": False,
+                    "message": "You are not authorized to delete this post."
+                    }
+            return Response(response, status=status.HTTP_401_UNAUTHORIZED)
         except Exception:
             # Invalid post URI
             return Response({

@@ -376,6 +376,8 @@ class PostDetailView(APITestCase):
 
     def test_delete_post(self):
         # This should succeed and return a 200 OK
+        # Authenticate as testAuthor
+        self.client.force_authenticate(user=self.testAuthor)
         new_post_id = self.post_id1_string[:-1] + '5'
         url = '/api/posts/' + new_post_id
         self.client.post(url, self.post_data, format='json')
@@ -387,8 +389,21 @@ class PostDetailView(APITestCase):
         # Test that this new post is no longer in the database
         self.assertEqual(Post.objects.filter(id=new_post_id).count(), 0)
 
-    def test_delete_post_invalid_uri(self):
+    def test_delete_post_unauthorized(self):
+        # This should succeed and return a 401 UNAUTHORIZED
         new_post_id = self.post_id1_string[:-1] + '6'
+        url = '/api/posts/' + new_post_id
+        self.client.post(url, self.post_data, format='json')
+        # Test that this new post is in the database
+        self.assertEqual(Post.objects.filter(id=new_post_id).count(), 1)
+        response = self.client.delete(url, format='json')
+        # Test to see if we get a 401 back.
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # Post should still exist:
+        self.assertEqual(Post.objects.filter(id=new_post_id).count(), 1)
+
+    def test_delete_post_invalid_uri(self):
+        new_post_id = self.post_id1_string[:-1] + '7'
         url = '/api/posts/' + new_post_id
         response = self.client.delete(url, format='json')
         # This post doesn't exist, so we should get a 404 back
@@ -934,7 +949,7 @@ class FriendRequest(APITestCase):
         self.assertTrue(response.data["message"].find(
             "is already friends with"))
 
-    def test_post_invalid_format_as_user(self):
+    def test_post_invalid_format(self):
         self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
