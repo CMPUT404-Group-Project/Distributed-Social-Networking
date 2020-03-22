@@ -24,8 +24,21 @@ def sanitize_author(obj):
     return obj
 
 
+def sanitize_post(obj):
+    # First thing we do is set the author to just the id of the author. this makes it deserializable
+    obj["author"] = obj["author"]["id"]
+
+    # Polar Bear sanitizers
+    if "description" in obj.keys():
+        if obj["description"] is None:
+            obj["description"] = "t"
+
+    return obj
+
+
 def get_public_posts():
     # Returns a QuerySet of all the public posts retrieved from http://service/posts
+    print("running")
     nodes = list(Node.objects.all())
     for node in nodes:
         if node.node_auth_username != "":
@@ -39,10 +52,19 @@ def get_public_posts():
                 posts_json = response.json()
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
-                    print(post["author"])
+
                     author = sanitize_author(post["author"])
                     author_serializer = AuthorSerializer(data=author)
 
                     if author_serializer.is_valid():
-                        print(author_serializer.validated_data)
-                        # author_serializer.save()
+                        author_serializer.save()
+                    # We now have the author saved, so we can move on to the posts
+                    post = sanitize_post(post)
+                    post_serializer = PostSerializer(data=post)
+                    if post_serializer.is_valid():
+                        post_serializer.save()
+                    else:
+                        print(post_serializer.errors)
+                        print("*****")
+                        print(post)
+                        print("=======")
