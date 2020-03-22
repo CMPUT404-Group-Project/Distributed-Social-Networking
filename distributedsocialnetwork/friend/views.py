@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from django.conf import settings
 from friend.models import FollowerManager, FriendManager, Follower
 from author.models import Author
+from django.conf import settings
 
 # Create your views here.
 
@@ -23,7 +24,10 @@ def show_friends(request):
     context['following'] = following
 
     # non-fff
-    everyone = Author.objects.all()
+    # Everyone now excludes nodes, admins
+    everyone = Author.objects.filter(
+        is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+    # TODO: add a separate section for displaying foreign authors
     fff = set([current_user] + followers + following + friends)
     others = []
     for author in everyone:

@@ -2,12 +2,14 @@ from django.shortcuts import render
 from author.models import Author
 from post.models import Post
 from friend.models import Friend
+from django.conf import settings
 
 
 def index(request):
     context = {}
-
-    authors = Author.objects.all()
+    # We only want the authors from our server to be featured in the "featured authors" section
+    authors = Author.objects.filter(
+        host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
     if request.user.is_authenticated:
         # We give them more results on the main stream
