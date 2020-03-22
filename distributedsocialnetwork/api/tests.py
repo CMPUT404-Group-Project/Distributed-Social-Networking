@@ -934,7 +934,7 @@ class FriendRequest(APITestCase):
         self.assertTrue(response.data["message"].find(
             "is already friends with"))
 
-    def test_post_invalid_format_as_user(self):
+    def test_post_invalid_format(self):
         self.client.force_authenticate(user=self.author1)
         post_body = {
             "query": "friendrequest",
