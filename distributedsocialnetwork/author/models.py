@@ -68,7 +68,8 @@ class Author(AbstractBaseUser):
     github = models.CharField(max_length=255, default="", blank=True)
     first_name = models.CharField(max_length=30, blank=False)
     last_name = models.CharField(max_length=150, blank=False)
-    email = models.EmailField(max_length=255, blank=False, unique=True)
+    email = models.EmailField(
+        max_length=255, blank=True, unique=False)
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
