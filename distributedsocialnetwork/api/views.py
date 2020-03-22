@@ -239,33 +239,40 @@ class PostDetailView(APIView):
                 pass
             try:
                 post = request.data["post"]
-                # Author gets collapsed to author's id
-                post["author"] = post["author"]["id"]
-                post["id"] = pk
-                post["categories"] = ','.join(post["categories"])
-                post["visibleTo"] = ','.join(post["visibleTo"])
-                serializer = PostSerializer(
-                    data=post, context={"request": request})
-                if serializer.is_valid():
-                    try:
-                        serializer.create(serializer.validated_data)
-                        return Response({
-                            "query": "addPost",
-                            "success": True,
-                            "message": "Post Added"
-                        }, status=status.HTTP_201_CREATED)
-                    except:
-                        # Failed to create, because that post id is already in use.
-                        # Posts can be updated, but they should be using PUT for this.
-                        return Response({
-                            "query": "addPost",
-                            "success": False,
-                            "message": "Post ID already exists."
-                        }, status=status.HTTP_403_FORBIDDEN)
+                # Authors can only create posts as themselves
+                if request.user.is_authenticated and request.user.id == post["author"]["id"]:
+                    # Author gets collapsed to author's id
+                    post["author"] = post["author"]["id"]
+                    post["id"] = pk
+                    post["categories"] = ','.join(post["categories"])
+                    post["visibleTo"] = ','.join(post["visibleTo"])
+                    serializer = PostSerializer(
+                        data=post, context={"request": request})
+                    if serializer.is_valid():
+                        try:
+                            serializer.create(serializer.validated_data)
+                            return Response({
+                                "query": "addPost",
+                                "success": True,
+                                "message": "Post Added"
+                            }, status=status.HTTP_201_CREATED)
+                        except:
+                            # Failed to create, because that post id is already in use.
+                            # Posts can be updated, but they should be using PUT for this.
+                            return Response({
+                                "query": "addPost",
+                                "success": False,
+                                "message": "Post ID already exists."
+                            }, status=status.HTTP_403_FORBIDDEN)
+                    return Response({
+                        "query": "addPost",
+                        "success": False,
+                        "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                 return Response({
                     "query": "addPost",
                     "success": False,
-                    "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                    "message": "Not Authorized."
+                }, status=status.HTTP_401_UNAUTHORIZED)
             except Exception as e:
                 # We can't parse the body
                 return Response({
@@ -283,24 +290,31 @@ class PostDetailView(APIView):
         if 'application/json' in request.headers["Content-Type"]:
             try:
                 post = request.data["post"]
-                # Author gets collapsed to author's id
-                post["author"] = post["author"]["id"]
-                post["id"] = pk
-                post["categories"] = ','.join(post["categories"])
-                post["visibleTo"] = ','.join(post["visibleTo"])
-                post_to_update = Post.objects.filter(id=pk)[0]
-                serializer = PostSerializer(instance=post_to_update, data=post)
-                if serializer.is_valid():
-                    serializer.save()
+                # Authors can only update their own posts
+                if request.user.is_authenticated and request.user.id == post["author"]["id"]:
+                    # Author gets collapsed to author's id
+                    post["author"] = post["author"]["id"]
+                    post["id"] = pk
+                    post["categories"] = ','.join(post["categories"])
+                    post["visibleTo"] = ','.join(post["visibleTo"])
+                    post_to_update = Post.objects.filter(id=pk)[0]
+                    serializer = PostSerializer(instance=post_to_update, data=post)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response({
+                            "query": "updatePost",
+                            "success": True,
+                            "message": "Post Updated"
+                        }, status=status.HTTP_200_OK)
                     return Response({
                         "query": "updatePost",
-                        "success": True,
-                        "message": "Post Updated"
-                    }, status=status.HTTP_200_OK)
+                        "success": False,
+                        "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                 return Response({
                     "query": "updatePost",
                     "success": False,
-                    "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                    "message": "Not Authorized."
+                }, status=status.HTTP_401_UNAUTHORIZED)
             except Exception as e:
                 # We can't parse the body
                 return Response({
