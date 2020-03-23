@@ -3,7 +3,6 @@ from author.models import Author
 from post.models import Post
 from friend.models import Friend
 from django.conf import settings
-from post.retrieval import get_public_posts
 
 
 def index(request):
