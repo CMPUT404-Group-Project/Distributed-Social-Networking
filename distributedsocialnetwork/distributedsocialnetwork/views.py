@@ -3,6 +3,7 @@ from author.models import Author
 from post.models import Post
 from friend.models import Friend
 from django.conf import settings
+from author.retrieval import get_friends_list
 
 
 def index(request):
@@ -11,6 +12,7 @@ def index(request):
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
+    get_friends_list(authors[0].id)
     if request.user.is_authenticated:
         # We give them more results on the main stream
         public_posts = Post.objects.filter(visibility="PUBLIC")
