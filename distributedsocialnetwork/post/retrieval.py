@@ -1,11 +1,11 @@
+import requests
 from node.models import Node
-from .models import Post, Comment
-from author.models import Author
-from post.serializers import PostSerializer, CommentSerializer
+from post.serializers import PostSerializer
 from author.serializers import AuthorSerializer
 import requests
 import datetime
 from django.conf import settings
+
 
 # The purpose of this is to provide functions that can import Posts from the other Nodes.
 # Each Node may not be completely to spec, so we may have to add server-specific compatibility here and there.
@@ -87,3 +87,20 @@ def get_public_posts():
                         except Exception as e:
                             print(e)
     return public_posts
+
+
+def get_detailed_post(post_id):
+    # get
+    # post_origin = post_origin + '/'
+    # url_parts = post_origin.split('/')
+    # print(url_parts)
+    # node_hostname = 'http://' + url_parts[2] + '/'
+    # post_id
+    # while
+
+    # post = Post.objects.get(id=post_id)
+    # print(post)
+    # url_to_query = foreign_node + 'posts/' + url_parts[-1]
+    # response = requests.get(
+    #     url_to_query, headers={'content-type': 'application/json', 'Accept': 'application/json'})
+    pass

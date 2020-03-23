@@ -29,5 +29,4 @@ def index(request):
     else:
         posts = Post.objects.filter(visibility="PUBLIC")
     context['posts'] = posts
-
     return render(request, 'index.html', context)
