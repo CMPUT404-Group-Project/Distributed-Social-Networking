@@ -12,7 +12,8 @@ def index(request):
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
-    get_friends_list(authors[0].id)
+    get_friends_list(
+        "https://dsnfof.herokuapp.com/author/71eedd37451648b79e72599a18460c83/")
     if request.user.is_authenticated:
         # We give them more results on the main stream
         public_posts = Post.objects.filter(visibility="PUBLIC")

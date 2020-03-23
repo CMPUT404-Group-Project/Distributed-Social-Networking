@@ -16,9 +16,16 @@ def get_friends_list(author_id):
     # We split up the author_id to get the host
     host = author_id.split('author')[0]
     uuid = author_id.split('/')[-1]
+    print(author_id)
     # We get the node for that host, assuming we have it set up.
     if len(Node.objects.filter(hostname=host)) == 1:
         node = Node.objects.get(hostname=host)
         # The URI of the request is built from their API url
         author_api_url = node.api_url + '/author/' + uuid
-        print(author_api_url)
+        response = requests.get(author_api_url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            friends_json = response.json()
+            print(friends_json)
+        else:
+            print(response)
