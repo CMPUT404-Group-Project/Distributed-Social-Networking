@@ -46,7 +46,9 @@ def change_author(request):
         form = AuthorChangeForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
-            return redirect(reverse_lazy('home'))
+            url_segments = request.user.id.split('/')
+            user_id = url_segments[-1]
+            return redirect(reverse_lazy('author', args=[user_id]))
     else:
         form = AuthorChangeForm(
             initial={

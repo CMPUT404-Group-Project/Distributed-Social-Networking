@@ -6,13 +6,13 @@ from .models import Author
 
 class AuthorCreationForm(UserCreationForm):
     displayName = forms.CharField(
-        max_length=150, help_text="Required. Enter a display name.")
+        max_length=150, help_text="Required.Enter a display name.")
     email = forms.EmailField(
-        max_length=255, help_text="Required. Enter a valid email address.")
+        max_length=255, help_text="Enter a valid email address.", required=False)
     first_name = forms.CharField(
-        max_length=30, help_text="Required. Enter your first name.")
+        max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
-        max_length=150, help_text="Required. Enter your last name.")
+        max_length=150, help_text="Enter your last name.", required=False)
     github = forms.CharField(
         max_length=255, help_text="Enter your GitHub profile url.", required=False)
 
@@ -24,16 +24,18 @@ class AuthorCreationForm(UserCreationForm):
 
 class AuthorChangeForm(UserChangeForm):
     first_name = forms.CharField(
-        max_length=30, help_text="Required. Enter your first name.")
+        max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
-        max_length=150, help_text="Required. Enter your last name.")
+        max_length=150, help_text="Enter your last name.", required=False)
     github = forms.CharField(
         max_length=255, help_text="Enter your GitHub profile url.", required=False)
+    bio = forms.CharField(
+        max_length=160, help_text="Enter a short bio.", required=False)
     password = None
 
     class Meta(UserChangeForm):
         model = Author
-        fields = ('first_name', 'last_name', 'github')
+        fields = ('first_name', 'last_name', 'github', 'bio')
 
 
 class AuthorAuthenticationForm(forms.ModelForm):

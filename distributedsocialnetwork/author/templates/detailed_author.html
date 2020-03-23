@@ -49,10 +49,17 @@
     </div>
     <div class="col p-2 justify-content-center">
       <h3>Display Name: {{author.displayName}}</h3>
-      <h3>First Name: {{author.first_name}}</h3>
-      <h3>Last Name: {{author.last_name}}</h3>
+      {% if author.first_name != ""%}
+        <h3>First Name: {{author.first_name}}</h3>
+      {% endif %}
+      {% if author.last_name != ""%}
+        <h3>Last Name: {{author.last_name}}</h3>
+      {% endif %}
+      {% if author.bio != ""%}
+        <h3>Bio: {{author.bio}}</h3>
+      {% endif %}
       {% if author.github != ""%}
-      <h3>GitHub: <a href="{{author.github}}">{{author.github}}</a></h3>
+        <h3>GitHub: <a href="{{author.github}}">{{author.github}}</a></h3>
       {% endif %}
       <small>Last Online: {{author.last_login}} {{ relationship }}</small>
     </div>
