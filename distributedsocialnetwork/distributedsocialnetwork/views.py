@@ -3,7 +3,6 @@ from author.models import Author
 from post.models import Post
 from friend.models import Friend
 from django.conf import settings
-from post.retrieval import get_public_posts
 
 
 def index(request):
@@ -24,7 +23,6 @@ def index(request):
             visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
         foaf_posts = Post.objects.filter(
             visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
-
         posts = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
     else:
         posts = Post.objects.filter(visibility="PUBLIC")
