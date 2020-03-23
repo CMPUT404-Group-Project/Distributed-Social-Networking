@@ -5,6 +5,7 @@ from django.conf import settings
 from friend.models import FollowerManager, FriendManager, Follower
 from author.models import Author
 from django.conf import settings
+from .retrieval import send_friend_request
 
 # Create your views here.
 
@@ -67,6 +68,19 @@ def accept_request(request):
         current_user = request.user
         to_friend_id = request.POST["authorId"]
         to_friend = Author.objects.filter(id=to_friend_id)[0]
+        if to_friend.host != settings.FORMATTED_HOST_NAME:
+            # They are a foreign author, so we have to send a friend request via the API
+            response = send_friend_request(current_user.id, to_friend_id)
+            if response.status_code == 200:
+                # Successful, we are good to go
+                FriendManager.add_friend("", current_user, to_friend)
+                return redirect(show_friends)
+            else:
+                # We can't add them as a friend right now.
+                # TODO: Popup message saying there was an error
+                print("HEY")
+                print(response.status_code)
+                return redirect(show_friends)
         FriendManager.add_friend("", current_user, to_friend)
     return redirect(show_friends)
 
