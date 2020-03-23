@@ -5,6 +5,7 @@ from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 import requests
 import datetime
+from django.conf import settings
 
 # The purpose of this is to provide functions that can import Posts from the other Nodes.
 # Each Node may not be completely to spec, so we may have to add server-specific compatibility here and there.
@@ -50,10 +51,19 @@ def get_public_posts():
                 posts_json = response.json()
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
-
+                    del post["source"]
+                    post["source"] = settings.FORMATTED_HOST_NAME + \
+                        'posts/' + post['id']
                     author = sanitize_author(post["author"])
+                    author['displayName'] = author['displayName'] + \
+                        " (" + node.server_username + ")"
+                    author_parts = author['id'].split('/')
+                    authorID = author_parts[-1]
+                    if authorID == '':
+                        authorID = author_parts[-2]
+                    author['url'] = settings.FORMATTED_HOST_NAME + \
+                        'author/' + authorID
                     author_serializer = AuthorSerializer(data=author)
-
                     if author_serializer.is_valid():
                         try:
                             author_serializer.save()
