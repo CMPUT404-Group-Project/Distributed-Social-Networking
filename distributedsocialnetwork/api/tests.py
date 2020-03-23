@@ -955,8 +955,29 @@ class FriendRequest(APITestCase):
         self.assertFalse(response.data["success"])
         self.assertTrue(response.data["message"].find(
             "has already sent a friend request to"))
-        # If we make them friends, it should return a 400
-        Friend.objects.add_friend(self.author1, self.author2)
+        # If we send a message the opposite way, they should now be friends
+        post_body = post_body = {
+            "query": "friendrequest",
+            "author": {
+                "id": self.author2.id,
+                "host": self.author2.host,
+                "displayName": self.author2.displayName,
+                "url": self.author2.url
+            },
+            "friend": {
+                "id": self.author1.id,
+                "host": self.author1.host,
+                "displayName": self.author1.displayName,
+                "url": self.author1.url
+            }
+        }
+        self.client.force_authenticate(user=self.author2)
+        response = self.client.post(url, post_body, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(Friend.objects.are_friends(self.author1, self.author2))
+        self.assertTrue(response.data["message"].find(
+            "are now friends"))
+        # If they are already friends, we should receive a 400
         response = self.client.post(url, post_body, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data["success"])
