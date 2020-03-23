@@ -656,6 +656,14 @@ class FriendRequest(APIView):
                     Author, id=request.data["friend"]["id"])
                 if not Friend.objects.are_friends(author, friend):
                     # If they are already friends, we don't need to send a friend request
+                    if Follower.objects.is_following(friend, author):
+                        # If we sent them a friend request, and are thus we should take this as a confirmation and add them as a friend
+                        Friend.objects.add_friend(author, friend)
+                        return Response({
+                            "query": "friendrequest",
+                            "success": True,
+                            "message": "Confirmation accepted, %s and %s are now friends." % (author.displayName, friend.displayName)
+                        }, status=status.HTTP_200_OK)
                     if not Follower.objects.is_following(author, friend):
                         # If a friend request has been sent then we don't need to send another
                         Follower.objects.add_follower(author, friend)
@@ -664,6 +672,7 @@ class FriendRequest(APIView):
                             "success": True,
                             "message": "Friend request to %s has been sent" % friend.displayName
                         }, status=status.HTTP_200_OK)
+                    # Otherwise, no point in sending one
                     return Response({
                         "query": "friendrequest",
                         "success": False,
