@@ -6,6 +6,7 @@ from post.models import Post, Comment
 from author.models import Author
 from friend.models import Friend, Follower
 from post.serializers import PostSerializer, CommentSerializer
+from author.serializers import AuthorSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
@@ -298,7 +299,8 @@ class PostDetailView(APIView):
                     post["categories"] = ','.join(post["categories"])
                     post["visibleTo"] = ','.join(post["visibleTo"])
                     post_to_update = Post.objects.filter(id=pk)[0]
-                    serializer = PostSerializer(instance=post_to_update, data=post)
+                    serializer = PostSerializer(
+                        instance=post_to_update, data=post)
                     if serializer.is_valid():
                         serializer.save()
                         return Response({
@@ -343,10 +345,10 @@ class PostDetailView(APIView):
                         "message": "Deleted post with id " + str(pk) + " and " + str(deleted_comments) + " comments."
                     })
             response = {
-                    "query": "deletePost",
-                    "success": False,
-                    "message": "You are not authorized to delete this post."
-                    }
+                "query": "deletePost",
+                "success": False,
+                "message": "You are not authorized to delete this post."
+            }
             return Response(response, status=status.HTTP_401_UNAUTHORIZED)
         except Exception:
             # Invalid post URI
@@ -638,6 +640,14 @@ class FriendRequest(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
         if 'application/json' in request.headers["Content-Type"]:
             try:
+                # First, if we don't have any record of this person, there is no point wasting our time.
+                if len(Author.objects.filter(id=request.data["friend"]["id"])) != 1:
+                    return Response({
+                        "query": "friendrequest",
+                        "success": False,
+                        "message": "The friend specified in the request body does not exist."
+                    }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                # Now we check if we have any record of the author sending the request.
                 if len(Author.objects.filter(id=request.data["author"]["id"])) != 1:
                     # Author does not exist in our db.
                     # If the host is different, we add it to the database.
@@ -645,15 +655,33 @@ class FriendRequest(APIView):
                     if request.user.is_node:
                         if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and request.data["author"]["host"] == request.user.host:
                             author = request.data["author"]
-                            Author.objects.update_or_create(
-                                id=author["id"], host=author["host"], displayName=author["displayName"], url=author["url"], github=author["github"])
+                            # We try serializing and saving the author
+                            author_serializer = AuthorSerializer(
+                                data=author)
+                            if author_serializer.is_valid():
+                                author_serializer.save()
+                            else:
+                                # We return a 422, we can't create an author based on this data
+                                return Response({
+                                    "query": "friendrequest",
+                                    "success": False,
+                                    "message": "Author in request body cannot be deserialized."
+                                }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+                        else:
+                            # You can't make an author this way if you are sending this via your own Node.
+                            return Response({
+                                "query": "friendrequest",
+                                "success": False,
+                                "message": "If you are sending friend requests from this server you should be logged in as a user."
+                            }, status=status.HTTP_403_FORBIDDEN)
                     else:
                         # We send a 400
                         return Response({
                             "query": "friendrequest",
                             "success": False,
                             "message": "User sending the request does not exist."
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                        }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                 else:
                     # Author already exists in our system.
                     # If the user is an author, we can send the friend request if they are the one sending it
@@ -674,10 +702,9 @@ class FriendRequest(APIView):
                                 "success": False,
                                 "message": "You cannot send a friend request on behalf of another user."
                             }, status=status.HTTP_401_UNAUTHORIZED)
-                author = get_object_or_404(
-                    Author, id=request.data["author"]["id"])
-                friend = get_object_or_404(
-                    Author, id=request.data["friend"]["id"])
+                author = Author.objects.get(id=request.data["author"]["id"])
+                friend = Author.objects.get(id=request.data["friend"]["id"])
+
                 if not Friend.objects.are_friends(author, friend):
                     # If they are already friends, we don't need to send a friend request
                     if Follower.objects.is_following(friend, author):
