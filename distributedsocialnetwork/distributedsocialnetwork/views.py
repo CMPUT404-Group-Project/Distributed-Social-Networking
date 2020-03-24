@@ -3,7 +3,7 @@ from author.models import Author
 from post.models import Post
 from friend.models import Friend
 from django.conf import settings
-from post.retrieval import get_public_posts
+from post.retrieval import get_detailed_post, get_public_posts
 
 
 def index(request):
@@ -29,5 +29,4 @@ def index(request):
     else:
         posts = Post.objects.filter(visibility="PUBLIC")
     context['posts'] = posts
-
     return render(request, 'index.html', context)
