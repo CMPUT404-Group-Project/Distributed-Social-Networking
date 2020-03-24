@@ -8,6 +8,7 @@ import uuid
 from django.conf import settings
 from .models import Post
 from django.shortcuts import get_object_or_404
+from author.models import Author
 
 
 # The purpose of this is to provide functions that can import Posts from the other Nodes.
@@ -87,7 +88,13 @@ def get_public_posts():
                         authorID = author_parts[-2]
                     author['url'] = settings.FORMATTED_HOST_NAME + \
                         'author/' + authorID
-                    author_serializer = AuthorSerializer(data=author)
+
+                    if (len(Author.objects.filter(id=author['id'])) == 1):
+                        old_author = Author.objects.get(id=author['id'])
+                        author_serializer = AuthorSerializer(
+                            old_author, data=author)
+                    else:
+                        author_serializer = AuthorSerializer(data=author)
                     if author_serializer.is_valid():
                         try:
                             author_serializer.save()
@@ -111,6 +118,8 @@ def get_public_posts():
                                       post_serializer.errors)
                         except Exception as e:
                             print(e)
+                    else:
+                        print("Error encountered:", author_serializer.errors)
     return public_posts
 
 
