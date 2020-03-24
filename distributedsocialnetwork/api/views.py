@@ -698,6 +698,7 @@ class FriendRequest(APIView):
                     # Author already exists in our system.
                     # If the user is an author, we can send the friend request if they are the one sending it
                     # If the user is a node, we send the friend request if they have the same host as the one sending it
+                    print(request.data["author"]["host"])
                     if request.user.is_node:
                         if request.data["author"]["host"] != request.user.host:
                             # We send a 401. They can't send requests on behalf of users from other hosts.
