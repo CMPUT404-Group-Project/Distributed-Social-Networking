@@ -26,16 +26,25 @@ def show_friends(request):
 
     # non-fff
     # Everyone now excludes nodes, admins
-    everyone = Author.objects.filter(
+    local = Author.objects.filter(
         is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+    # Foreign is everyone who is not local
+    foreign = Author.objects.filter(is_node=False, is_staff=False).exclude(
+        host=settings.FORMATTED_HOST_NAME)
     # TODO: add a separate section for displaying foreign authors
     fff = set([current_user] + followers + following + friends)
-    others = []
-    for author in everyone:
+    other_local = []
+    other_foreign = []
+    for author in local:
         if author not in fff:
-            others.append(author)
-    context['everyone'] = everyone
-    context['others'] = others
+            other_local.append(author)
+    for author in foreign:
+        if author not in fff:
+            other_foreign.append(author)
+    context['local'] = local
+    context['other_local'] = other_local
+    context['foreign'] = foreign
+    context['other_foreign'] = other_foreign
 
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
@@ -47,7 +56,16 @@ def follow_author(request):
         current_user = request.user
         to_follow_id = request.POST["authorId"]
         to_follow = Author.objects.filter(id=to_follow_id)[0]
-        FollowerManager.add_follower("", current_user, to_follow)
+        response = send_friend_request(current_user.id, to_follow_id)
+        if response.status_code == 200:
+            # Successful, we are good to go
+            FollowerManager.add_follower("", current_user, to_follow)
+            return redirect(show_friends)
+        else:
+            print(response.status_code)
+            print(response.json())
+            return redirect(show_friends)
+
     return redirect(show_friends)
 
 
@@ -78,8 +96,8 @@ def accept_request(request):
             else:
                 # We can't add them as a friend right now.
                 # TODO: Popup message saying there was an error
-                print("HEY")
                 print(response.status_code)
+                print(response.json())
                 return redirect(show_friends)
         FriendManager.add_friend("", current_user, to_friend)
     return redirect(show_friends)

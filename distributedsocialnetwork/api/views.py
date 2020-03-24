@@ -5,6 +5,7 @@ from rest_framework.authentication import BasicAuthentication
 from post.models import Post, Comment
 from author.models import Author
 from friend.models import Friend, Follower
+from node.models import Node
 from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 from django.core.paginator import Paginator
@@ -655,6 +656,17 @@ class FriendRequest(APIView):
                     if request.user.is_node:
                         if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and request.data["author"]["host"] == request.user.host:
                             author = request.data["author"]
+                            # We have to adjust a couple of things before we add them to our database
+                            # First, they are a node, and need that node info
+                            node = Node.objects.get(hostname=request.user.host)
+                            author['displayName'] = author['displayName'] + \
+                                ' (' + node.server_username + ')'
+                            author_parts = author['id'].split('/')
+                            authorID = author_parts[-1]
+                            if authorID == '':
+                                authorID = author_parts[-2]
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
                             # We try serializing and saving the author
                             author_serializer = AuthorSerializer(
                                 data=author)
