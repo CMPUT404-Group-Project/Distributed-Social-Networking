@@ -99,10 +99,8 @@ def get_detailed_post(post_id):
         response = requests.get(
             url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
-        print(response)
         if response.status_code == 200:
             post_json = response.json()
-        print(post_json)
         post_data = post_json['posts'][0]
         post_data = transformSource(post_data)
         post = sanitize_post(post_data)
