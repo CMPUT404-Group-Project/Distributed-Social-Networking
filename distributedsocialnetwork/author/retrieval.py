@@ -59,7 +59,14 @@ def get_visible_posts(author_id):
                         authorID = author_parts[-2]
                     author['url'] = settings.FORMATTED_HOST_NAME + \
                         'author/' + authorID
-                    author_serializer = AuthorSerializer(data=author)
+                    # Check if we already have that author in our db
+                    # already. If so, update it.
+                    if (len(Author.objects.filter(id=author['id'])) == 1):
+                        old_author = Author.objects.get(id=author['id'])
+                        author_serializer = AuthorSerializer(
+                            old_author, data=author)
+                    else:
+                        author_serializer = AuthorSerializer(data=author)
                     if author_serializer.is_valid():
                         try:
                             author_serializer.save()
