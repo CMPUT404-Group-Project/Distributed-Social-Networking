@@ -12,7 +12,7 @@ def index(request):
     # We only want the authors from our server to be featured in the "featured authors" section
     # get_public_posts()
     get_friends_list(
-        'http://dsnfof-shadow.herokuapp.com/author/2e8cff62aa414abf85687df906500f22')
+        'http://dsnfof-shadow.herokuapp.com/author/86d3e61fcfbe431aa7d8c7c50d4258da')
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
