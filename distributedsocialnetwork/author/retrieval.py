@@ -95,8 +95,8 @@ def get_visible_posts(author_id):
 
 def get_detailed_author(author_id):
     local_copy = get_object_or_404(Author, id__icontains=author_id)
-    if (local_copy.origin != local_copy.source):
-        local_split = local_copy.origin.split('/')
+    if (settings.FORMATTED_HOST_NAME != local_copy.host):
+        local_split = local_copy.id.split('/')
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'author/' + local_split[-1]
         response = requests.get(url, auth=(
