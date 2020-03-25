@@ -3,19 +3,19 @@ from author.models import Author
 from post.models import Post
 from friend.models import Friend
 from django.conf import settings
-from author.retrieval import get_friends_list
+from friend.retrieval import get_friends_list
 from post.retrieval import get_detailed_post, get_public_posts
 
 
 def index(request):
     context = {}
     # We only want the authors from our server to be featured in the "featured authors" section
-    get_public_posts()
+    # get_public_posts()
+    get_friends_list(
+        'http://dsnfof-shadow.herokuapp.com/author/2e8cff62aa414abf85687df906500f22')
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
-    get_friends_list(
-        "https://dsnfof.herokuapp.com/author/71eedd37451648b79e72599a18460c83/")
     if request.user.is_authenticated:
         # We give them more results on the main stream
         public_posts = Post.objects.filter(visibility="PUBLIC")
