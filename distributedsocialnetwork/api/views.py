@@ -10,7 +10,7 @@ from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
 
@@ -148,6 +148,18 @@ class VisiblePosts(APIView):
             post["comments"] = comment_list_dict["comments"]
         response["posts"] = post_list_dict["posts"]
         return Response(response)
+
+# ====== /api/posts/foreign/ ======
+
+class ForeignPosts(APIView):
+    # Retrieves all posts not originating from this server.
+    # Returned as HTML for simple front-end integration.
+    def get(self, request):
+        posts = Post.objects.filter(visibility="PUBLIC").exclude(
+            origin__icontains=settings.FORMATTED_HOST_NAME)
+        context = {}
+        context["posts"] = posts
+        return render(request, 'stream.html', context)
 
 # ====== /api/posts/<post_id> ======
 
