@@ -5,6 +5,7 @@ from django.http import HttpResponseNotFound
 
 from .forms import AuthorCreationForm, AuthorChangeForm, AuthorAuthenticationForm
 from .models import Author
+from .retrieval import get_detailed_author
 from post.models import Post
 from friend.models import Friend, Follower
 
@@ -99,7 +100,7 @@ def logout_author(request):
 
 def view_author(request, pk):
     context = {}
-    context['author'] = get_object_or_404(Author, id__icontains=pk)
+    context['author'] = get_detailed_author(Author_id=pk)
     if request.method == "GET":
         context["friendrequest"] = "DISABLED"
         if request.user.is_authenticated:
