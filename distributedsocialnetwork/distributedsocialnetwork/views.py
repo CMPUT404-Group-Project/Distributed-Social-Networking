@@ -4,11 +4,13 @@ from post.models import Post
 from friend.models import Friend
 from django.conf import settings
 from author.retrieval import get_friends_list
+from post.retrieval import get_detailed_post, get_public_posts
 
 
 def index(request):
     context = {}
     # We only want the authors from our server to be featured in the "featured authors" section
+    get_public_posts()
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
@@ -30,5 +32,4 @@ def index(request):
     else:
         posts = Post.objects.filter(visibility="PUBLIC")
     context['posts'] = posts
-
     return render(request, 'index.html', context)

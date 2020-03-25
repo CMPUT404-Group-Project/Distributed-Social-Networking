@@ -30,10 +30,8 @@
         <div class="card-body row">
 
           <div class="col-8">
-          <h5><span style="font-weight:bold">{{ follower.first_name }} {{follower.last_name}} </span> is following you, click accept to add them to your friends.</h5>
-          <a href="{{ follower.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ follower.displayName }}</h6></a>
+          <h5><a href="{{ follower.url }}"><span style="font-weight:bold">{{ follower.displayName}}</a> is following you, click accept to add them to your friends.</h5>
           </div>
-
           <div class=" col-4">
               <form method="post" action="reject" style="float:right">
                       {% csrf_token %}
@@ -68,8 +66,7 @@
       <div class="card m-2 post">
           <div class="card-body row">
             <div class="col-8">
-            <h5><span style="font-weight:bold">{{ follow.first_name }} {{follow.last_name}} </span></h5>
-            <a href="{{ follow.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ follow.displayName }}</h6></a>
+              <h5><a href="{{ follow.url }}"><span style="font-weight:bold">{{ follow.displayName}} </a></h5>
             </div>
   
             <div class=" col-4">
@@ -101,8 +98,7 @@
           <div class="card m-2 post">
               <div class="card-body row">
                 <div class="col-8">
-                <h5><span style="font-weight:bold">{{ friend.first_name }} {{friend.last_name}} </span></h5>
-                <a href="{{ friend.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ friend.displayName }}</h6></a>
+                  <h5><a href="{{ friend.url }}"><span style="font-weight:bold">{{ friend.displayName}} </a></h5>
                 </div>
       
                 <div class=" col-4">
@@ -126,15 +122,14 @@
           {% endif %}
           
           <div class="row p-2 justify-content-left">
-              <h2>Explore</h2>
+              <h2>Explore Local</h2>
             </div>
-            {% if others|length %}
-            {% for other in others %}
+            {% if other_local|length %}
+            {% for other in other_local %}
             <div class="card m-2 post">
                 <div class="card-body row">
                   <div class="col-8">
-                  <h5><span style="font-weight:bold">{{ other.first_name }} {{other.last_name}} </span></h5>
-                  <a href="{{ other.url }}"><h6 class="card-subtitle mb-2 text-muted">@{{ other.displayName }}</h6></a>
+                    <h5><a href="{{ other.url }}"><span style="font-weight:bold">{{ other.displayName}} </a></h5>
                   </div>
                   <div class=" col-4">
                       <form method="post" action="follow" style="float:right">
@@ -155,12 +150,41 @@
                 </div>
             </div>
           {% endif %}
+          <div class="row p-2 justify-content-left">
+            <h2>Explore Foreign</h2>
+          </div>
+          {% if other_foreign|length %}
+          {% for other in other_foreign %}
+          <div class="card m-2 post">
+              <div class="card-body row">
+                <div class="col-8">
+                <h5><a href="{{ other.url }}"><span style="font-weight:bold">{{ other.displayName}} </a></h5>
+                </div>
+                <div class=" col-4">
+                    <form method="post" action="follow" style="float:right">
+                            {% csrf_token %}
+                            <input type="hidden" name="authorId" value="{{other.id}}">
+                            <button type="submit" class="btn btn-primary">Follow</button>
+                        </form>
+                  </div>
+              </div>
+            </div>
+          {% endfor %}
+          {% else %}
+          <div class="card m-2 post">
+              <div class="card-body row">
+                <div class="col">
+                <h5>There is no one else here.</h5>
+                </div>
+              </div>
+          </div>
+        {% endif %}
   </div>
   <div class="col text-right sidebar bg-light">
     <div class="row justify-content-center">
       <h2>Featured Authors</h2>
     </div>
-    {% for author in everyone %}
+    {% for author in local %}
     <div class="card m-2 featured-author">
       <div class="card-body">
         <a class="card-title" href="{{ author.url }}">
