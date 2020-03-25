@@ -13,7 +13,9 @@ from django.shortcuts import get_object_or_404
 
 # Given a QuerySet 'posts', returns another QuerySet
 # containing the posts that 'author_id' can see.
-def filter_posts(posts,author_id):
+
+
+def filter_posts(posts, author_id):
     public_posts = posts.filter(visibility="PUBLIC")
     user_posts = posts.filter(author=author_id)
     privated_posts = posts.filter(
@@ -28,6 +30,8 @@ def filter_posts(posts,author_id):
     return post_query_set
 
 # Returns a QuerySet of all foreign posts the specified author is authorized to see
+
+
 def get_visible_posts(author_id):
     author = get_object_or_404(Author, id=author_id)
     nodes = list(Node.objects.all())
@@ -40,7 +44,7 @@ def get_visible_posts(author_id):
             print("sending to ", url)
             # Include a header containing the Author's id, other nodes may not conform to this.
             response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id })
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
@@ -72,7 +76,7 @@ def get_visible_posts(author_id):
                             author_serializer.save()
                             print("saved author")
                             # We now have the author saved, so we can move on to the posts
-                            
+
                             post_serializer = PostSerializer(data=post)
                             if post_serializer.is_valid():
                                 try:
@@ -91,40 +95,66 @@ def get_visible_posts(author_id):
                         except Exception as e:
                             print(e)
     # Filter returned posts to return only those this author can see
-    return filter_posts(visible_posts,author_id)
+    return filter_posts(visible_posts, author_id)
+
 
 def get_detailed_author(author_id):
-    local_copy = get_object_or_404(Author, id__icontains=author_id)
-    if (settings.FORMATTED_HOST_NAME != local_copy.host):
-        local_split = local_copy.id.split('/')
-        node = Node.objects.get(hostname__contains=local_split[2])
+    # We want to either store the author for the first time, or save them
+
+    # local_copy = get_object_or_404(Author, id__icontains=author_id)
+    if (settings.FORMATTED_HOST_NAME != author_id.split('author/')[0]):
+        if len(Node.objects.filter(hostname=author_id.split('author/')[0])) != 1:
+            # We don't have the credentials to get this user's info
+            print(hostname=author_id.split('author/')[0])
+            return None
+        local_split = author_id.split('author/')
+        node = Node.objects.get(hostname=local_split[0])
         url = node.api_url + 'author/' + local_split[-1]
         response = requests.get(url, auth=(
             node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'appliation/json', 'Accept': 'application/json'})
-        if reponse.status_code == 200:
+        if response.status_code == 200:
             author_json = response.json()
         author_data = author_json['author']
-        author_data = transformSource(author_data)
         author = sanitize_author(author_data)
-        author_serializer = AuthorSerializer(local_copy,data=author)
+        # A couple of modifications so we can easily tell they are a foreign author
+        author['displayName'] = author['displayName'] + \
+            " (" + node.server_username + ")"
+        author_parts = author['id'].split('/')
+        authorID = author_parts[-1]
+        if authorID == '':
+            authorID = author_parts[-2]
+        author['url'] = settings.FORMATTED_HOST_NAME + \
+            'author/' + authorID
+        print(author_data)
+        if len(Author.objects.filter(id=author_id)) == 1:
+            # We have an author already, we need to update it
+            author_serializer = AuthorSerializer(
+                Author.objects.get(id=author_id), data=author)
+        else:
+            author_serializer = AuthorSerializer(data=author)
         if author_serializer.is_valid():
             print("it is valid")
             try:
                 author_serializer.save()
-                print("Updated author", author_serializer.validated_data["displayName"])
-                new_copy = get_object_or_404(Author, id=author_serializer.validated_data["id"])
+                print("Updated author",
+                      author_serializer.validated_data["displayName"])
+                new_copy = get_object_or_404(
+                    Author, id=author_serializer.validated_data["id"])
             except Exception as e:
-                print("Error saving author", author_serializer.validated_data["displayName"], str(e))
+                print("Error saving author",
+                      author_serializer.validated_data["displayName"], str(e))
         else:
             print("Error encountered:", author_serializer.errors)
-            return local_copy
+            return None
         return new_copy
     else:
-        return local_copy
+        # We have this user already, it belongs to our server
+        return get_object_or_404(Author, id=author_id)
 
 
 def transformSource(author_obj):
     del author_obj["source"]
-    author_obj["source"] = settings.FORMATTED_HOST_NAME + 'author/' + author_obj['id']
+    author_obj["source"] = settings.FORMATTED_HOST_NAME + \
+        'author/' + author_obj['id']
     return author_obj
