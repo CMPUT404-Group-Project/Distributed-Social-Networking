@@ -2,19 +2,11 @@
 import requests
 from node.models import Author
 from author.serializers import AuthorSerializer
+from post.retrieval import sanitize_author
 import datetime
 from django.conf import settings
 from .models import Author
 from django.shortcuts import get_object_or_404
-
-def sanitize_author(obj):
-    # Make any modifications necessary to fit spec
-    #Mandala:
-    if "display_name" in obj.keys():
-        obj["displayName"] = obj["display_name"]
-        del obj[display_name]
-    
-    return obj
 
 def get_detailed_author(author_id):
     local_copy = get_object_or_404(Author, id__icontains=author_id)
