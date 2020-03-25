@@ -4,6 +4,7 @@ from friend.models import Friend, Follower
 from author.serializers import AuthorSerializer
 from post.retrieval import sanitize_author
 from author.retrieval import get_detailed_author
+from django.conf import settings
 import requests
 
 
@@ -33,7 +34,7 @@ def send_friend_request(author_id, friend_id):
     return response
 
 
-def get_friends_list(author_id):
+def update_friends_list(author_id):
     # Sends a request to retrieve the list of friends of a user, and returns a list of their IDs.
     # If we have the author we are querying in our db, we should be updating their friends list by doing this.
     # We will add the friends that we have PREVIOUSLY seen. This prevents us from sending requests out to other servers who we do not have
@@ -41,7 +42,6 @@ def get_friends_list(author_id):
 
     author = Author.objects.get(id=author_id)
     author_uuid = author.id.split('author/')[1]
-    print(author.host)
     if author.host[-1] != '/':
         host = author.host + '/'
     else:
@@ -52,7 +52,6 @@ def get_friends_list(author_id):
     # And so we send the request
     response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
                             'content-type': 'application/json', 'Accept': 'application/json'})
-    print(response.status_code)
     if response.status_code == 200:
         friends_response = response.json()
         if "authors" in friends_response:
@@ -83,6 +82,14 @@ def get_friends_list(author_id):
                                     # One minor modification to the displayName:
                                     author_data = sanitize_author(
                                         response.json()["author"])
+                                    author_data['displayName'] = author_data['displayName'] + \
+                                        " (" + node.server_username + ")"
+                                    author_parts = author_data['id'].split('/')
+                                    authorID = author_parts[-1]
+                                    if authorID == '':
+                                        authorID = author_parts[-2]
+                                    author_data['url'] = settings.FORMATTED_HOST_NAME + \
+                                        'author/' + authorID
                                     try:
                                         author_serializer = AuthorSerializer(
                                             data=author_data)
@@ -102,3 +109,4 @@ def get_friends_list(author_id):
                         # We aren't updating them, just adding reference to how they are friends
                         friend = Author.objects.get(id=friend_id)
                         Friend.objects.add_friend(author, friend)
+    return response
