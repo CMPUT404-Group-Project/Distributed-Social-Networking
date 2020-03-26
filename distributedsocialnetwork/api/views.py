@@ -151,6 +151,7 @@ class VisiblePosts(APIView):
 
 # ====== /api/posts/foreign/ ======
 
+
 class ForeignPosts(APIView):
     # Retrieves all posts not originating from this server.
     # Returned as HTML for simple front-end integration.
@@ -779,16 +780,15 @@ class AuthorDetail(APIView):
     def get(self, request, pk):
         # Returns the author object when requested
         author = get_object_or_404(Author, id__icontains=pk)
+        # Use the serializer!
+        author_serializer = AuthorSerializer(author)
+        author_dict = author_serializer.data
+        # We want to include friends as well, per the spec
+        friend_dicts = []
+        for friend in Friend.objects.get_friends(author):
+            friend_dicts.append(AuthorSerializer(friend).data)
+        author_dict["friends"] = friend_dicts
         response = {
-            "author": {
-                "id": author.id,
-                "displayName": author.displayName,
-                "firstName": author.first_name,
-                "lastName": author.last_name,
-                "email": author.email,
-                "url": author.url,
-                "host": author.host,
-                "github": author.github
-            }
+            "author": author_dict
         }
         return Response(response, status=status.HTTP_200_OK)
