@@ -1,7 +1,9 @@
 {% extends 'base.html' %} 
 {% load markup_tags %}
 {% block title %} {{ author.displayName }} {% endblock %}
+{% if request.user.is_authenticated and author.displayName == request.user.displayName %}
 {% block nav-profile%}<a class="nav-link active" href="{{request.user.url}}">{{ request.user|title }}</a>{% endblock %}
+{% endif %}
 {% block stylesheet %}
 <style>
   .markdown-content{
