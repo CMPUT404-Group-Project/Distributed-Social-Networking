@@ -26,11 +26,17 @@ def send_friend_request(author_id, friend_id):
         "friend": friend_data,
     }
     # Now we send it. But to what URL?
-    node = Node.objects.get(hostname=friend.host)
+    node = Node.objects.get(hostname__icontains=friend.host)
+    print(query)
     url = node.api_url + 'friendrequest'
     # And we send it off
     response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
                              'content-type': 'application/json', 'Accept': 'application/json'})
+    if response.status_code != 200:
+        # Let us try again for the response, with a backslash
+        url = url + '/'
+        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
     return response
 
 
