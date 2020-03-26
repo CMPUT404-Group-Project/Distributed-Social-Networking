@@ -28,6 +28,7 @@ class NodeManager(models.Manager):
     def remove(self, node):
         # To delete a node object and also delete its corresponding author object
         Author.objects.get(displayName=node.server_username).delete()
+        Author.objects.get(host=node.hostname).delete()
 
 
 class Node(models.Model):

@@ -39,7 +39,18 @@ class NodeAdmin(admin.ModelAdmin):
     def delete_model(self, request, obj):
         # We just delete the Author object we are attatched to
         # It will cascade
-        Author.objects.get(displayName=obj.server_username).delete()
+        node_user = Author.objects.get(displayName=obj.server_username)
+        node_user.delete()
+        # We want to delete all authors that belong to this host on deletion, which will cascade anything else they have touched.
+        authors = Author.objects.filter(host__contains=obj.hostname)
+        for author in authors:
+            author.delete()
+        # And sometimes the hostname on an author has no backslash:
+        print(obj.hostname[:-1])
+        authors = Author.objects.filter(host=obj.hostname[:-1])
+        for author in authors:
+            author.delete()
+        super().delete_model(request, obj)
 
 
 admin.site.register(Node, NodeAdmin)
