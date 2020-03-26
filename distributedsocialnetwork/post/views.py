@@ -53,7 +53,6 @@ def view_post(request, pk):
                 form = PostCommentForm()
     else:
         form = PostCommentForm()
-
     context['post'] = get_detailed_post(post_id=pk)
     # Now that we have the post in the backend, we have to verify that the current user can see it.
     post_visibility = context["post"].visibility

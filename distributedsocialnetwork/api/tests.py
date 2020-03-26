@@ -416,12 +416,11 @@ class PostDetailView(APITestCase):
         }
         url = '/api/posts/' + self.post_id1_string
         response = self.client.put(url, post_data, format='json')
-        #Should get a 401 UNAUTHORIZED
+        # Should get a 401 UNAUTHORIZED
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         # Let's ensure it didn't update the post
         post = Post.objects.filter(id=self.post_id1)[0]
         self.assertNotEqual(post.title, "This is the updated title!")
-
 
     def test_delete_post(self):
         # This should succeed and return a 200 OK
@@ -1129,10 +1128,6 @@ class AuthorDetail(APITestCase):
         self.assertEquals(response.data["author"]["id"], self.author1.id)
         self.assertEquals(
             response.data["author"]["displayName"], self.author1.displayName)
-        self.assertEquals(response.data["author"]
-                          ["firstName"], self.author1.first_name)
-        self.assertEquals(response.data["author"]
-                          ["lastName"], self.author1.last_name)
         self.assertEquals(response.data["author"]["email"], self.author1.email)
         self.assertEquals(response.data["author"]["url"], self.author1.url)
         self.assertEquals(response.data["author"]["host"], self.author1.host)
