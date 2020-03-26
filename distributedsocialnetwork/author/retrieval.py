@@ -118,6 +118,7 @@ def get_detailed_author(author_id):
                 return None
             local_split = author_id.split('author/')
             node = Node.objects.get(hostname=local_split[0])
+            # We have to convert the url to contain a UUID if it otherwise wont
             url = node.api_url + 'author/' + local_split[-1]
             response = requests.get(url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={

@@ -37,6 +37,7 @@ def create_post(request):
 
 
 def view_post(request, pk):
+    print(pk)
     context = {}
     if request.POST:
         if request.user.is_authenticated:

@@ -49,8 +49,8 @@ def sanitize_post(obj):
 
     if "id" in obj.keys():
         if type(obj["id"]) == type(1):
-            # We give it a UUID
-            obj["id"] = uuid.uuid4().hex
+            # We have to give it a unique UUID. We will generate one based on its origin:
+            obj["id"] = uuid.UUID(bytes=str.encode(obj["origin"])).hex
         # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
     if "description" in obj.keys():
@@ -106,8 +106,13 @@ def get_public_posts():
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        author['url'] = settings.FORMATTED_HOST_NAME + \
-                            'author/' + authorID
+                        # Our author URLS need a UUID, so let's convert it if need be
+                        if type(author_parts[-2]) == type(1):
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + uuid.UUID(int=authorID)
+                        else:
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
 
                         if (len(Author.objects.filter(id=author['id'])) == 1):
                             old_author = Author.objects.get(id=author['id'])
@@ -120,9 +125,9 @@ def get_public_posts():
                                 author_serializer.save()
                                 print("saved author")
                                 # We now have the author saved, so we can move on to the posts
-                                if len(Post.objects.filter(id=post["id"])) == 1:
+                                if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
-                                        Post.objects.get(id=post["id"]), data=post)
+                                        Post.objects.get(origin=post["origin"]), data=post)
                                 else:
                                     post_serializer = PostSerializer(data=post)
                                 if post_serializer.is_valid():
@@ -166,9 +171,16 @@ def get_detailed_post(post_id):
         if 'posts' not in post_json.keys():
             if "post" in post_json.keys():
                 post_json["posts"] = post_json["post"]
+            else:
+                # We don't have them in a wrapper, we should put them in one for compatibility
+                posts = [{}]
+                for attribute in post_json.keys():
+                    posts[0][attribute] = post_json[attribute]
+                post_json["posts"] = posts
         post_data = post_json['posts'][0]
-        post_data = transformSource(post_data)
         post = sanitize_post(post_data)
+        post_data = transformSource(post_data)
+
         post_serializer = PostSerializer(local_copy, data=post)
         if post_serializer.is_valid():
             print("it is valid")
