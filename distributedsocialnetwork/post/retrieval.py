@@ -1,6 +1,6 @@
 import requests
 from node.models import Node
-from post.serializers import PostSerializer
+from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 import requests
 import datetime
@@ -178,7 +178,57 @@ def get_detailed_post(post_id):
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
 def get_comments(post_id):
-    return Comment.objects.filter(post_id=post_id)
+    #return Comment.objects.filter(post_id=post_id)
+    comments = Comment.objects.filter(post_id=post_id)
+    comm_ids = []
+    for comment in comments:
+        comm_ids.append(comment[id])
+    nodes = list(Node.objects.all())
+    for node in nodes:
+        if node.node_auth_username != "":
+            # We can authenticate
+            url = node.api_url + 'posts/' + post_id
+            print("sending to ", url)
+            # Include a header containing the Author's id, other nodes may not conform to this.
+            response = requests.get(
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
+            if response.status_code == 200:
+                #If they have it, check the comments for any uncached comments
+                posts_json = response.json()
+                for post in posts_json["posts"]:
+                    post = sanitize_post(post)
+                    for comment in post.comments:
+                        # Add comment to list of comments to return if it is not already there
+                        if comment[id] not in comm_ids:
+                            comments.append(comment)
+                            author = sanitize_author(comment["author"])
+                            # Update author info in the db for the comment
+                            if (len(Author.objects.filter(id=author['id'])) == 1):
+                                old_author = Author.objects.get(id=author['id'])
+                                author_serializer = AuthorSerializer(
+                                    old_author, data=author)
+                            else:
+                                author_serializer = AuthorSerializer(data=author)
+                            if author_serializer.is_valid():
+                                try:
+                                    author_serializer.save()
+                                except Exception as e:
+                                    print("Error saving author", 
+                                        author_serializer.validated_data["displayName"], str(e))
+                            else:
+                                print("Error encountered:", author_serializer.errors)
+                            comment_serializer = CommentSerializer(comment)
+                            if comment_serializer.is_valid():
+                                try:
+                                    comment_serializer.save()
+                                except Exception as e:
+                                    print("Error saving comment", 
+                                        comment_serializer.validated_data["id"], str(e))
+                            else:
+                                print("Error encountered:", comment_serializer.errors) 
+		    post = transformSource(post)
+    # Return comments with the newly appended comments
+    return comments
 
 
 def transformSource(post_obj):
