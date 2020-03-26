@@ -170,6 +170,9 @@ def get_detailed_post(post_id):
     # response = requests.get(
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
+def get_comments(post_id):
+    return Comment.objects.filter(post_id=post_id)
+
 
 def transformSource(post_obj):
     del post_obj["source"]

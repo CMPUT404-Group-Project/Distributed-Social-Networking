@@ -7,7 +7,7 @@ from friend.models import Friend
 from author.models import Author
 import datetime
 import uuid
-from .retrieval import get_detailed_post
+from .retrieval import get_detailed_post, get_comments
 # Create your views here.
 
 
@@ -79,7 +79,7 @@ def view_post(request, pk):
     context['edit_url'] = request.get_full_path() + '/edit'
     context["request"] = request
     context['postCommentForm'] = form
-    context['comments'] = Comment.objects.filter(post_id=pk)
+    context['comments'] = get_comments(post_id=pk)#Comment.objects.filter(post_id=pk)
     return render(request, 'detailed_post.html', context)
 
 
