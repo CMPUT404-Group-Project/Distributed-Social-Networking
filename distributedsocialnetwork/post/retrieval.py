@@ -177,9 +177,9 @@ def get_detailed_post(post_id):
     # response = requests.get(
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
-def get_comments(post_id):
+def get_comments(pk):
     #return Comment.objects.filter(post_id=post_id)
-    comments = Comment.objects.filter(post_id=post_id)
+    comments = Comment.objects.filter(post_id=pk)
     comm_ids = []
     for comment in comments:
         comm_ids.append(comment["id"])
@@ -187,7 +187,7 @@ def get_comments(post_id):
     for node in nodes:
         if node.node_auth_username != "":
             # We can authenticate
-            url = node.api_url + 'posts/' + post_id
+            url = node.api_url + 'posts/' + pk
             print("sending to ", url)
             # Include a header containing the Author's id, other nodes may not conform to this.
             response = requests.get(
