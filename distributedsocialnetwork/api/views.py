@@ -787,6 +787,22 @@ class FriendRequest(APIView):
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# ====== /api/author ======
+class Authors(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({
+                "query": "author",
+                "success": False,
+                "message": "Authentication is required for this endpoint."
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+        serializer = AuthorSerializer(authors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 # ====== /api/author/{author_id}/ ======
 
 
