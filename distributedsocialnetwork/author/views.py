@@ -100,7 +100,9 @@ def logout_author(request):
 
 def view_author(request, pk):
     context = {}
-    context['author'] = get_detailed_author(author_id=pk)
+    author = get_object_or_404(Author, id__icontains=pk)
+    get_detailed_author(author_id=author.id)
+    context['author'] = author
     if request.method == "GET":
         context["friendrequest"] = "DISABLED"
         if request.user.is_authenticated:

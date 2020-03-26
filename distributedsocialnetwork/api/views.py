@@ -151,6 +151,7 @@ class VisiblePosts(APIView):
 
 # ====== /api/posts/foreign/ ======
 
+
 class ForeignPosts(APIView):
     # Retrieves all posts not originating from this server.
     # Returned as HTML for simple front-end integration.
@@ -471,21 +472,22 @@ class AuthUserPosts(APIView):
                 # We assume that we currently have their users stored in our system.
                 hostname = settings.FORMATTED_HOST_NAME
                 public_posts = Post.objects.filter(
-                    visibility="PUBLIC", source__icontains=hostname)
+                    visibility="PUBLIC", origin__contains=hostname)
                 privated_posts = Post.objects.none()
                 friend_posts = Post.objects.none()
                 foaf_posts = Post.objects.none()
                 for author in list(Author.objects.filter(host=request.user.host)):
                     # For each author belonging to that server, we add the posts they are able to see
                     privated_posts = privated_posts | Post.objects.filter(
-                        visibility="PRIVATE", visibleTo__icontains=author.id)
+                        visibility="PRIVATE", visibleTo__icontains=author.id, origin__contains=hostname)
                     friend_posts = friend_posts | Post.objects.filter(
-                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author))
+                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author), origin__contains=hostname)
                     # TODO: FOAF
                 post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
-            post_query_set = Post.objects.filter(visibility="PUBLIC")
+            post_query_set = Post.objects.filter(
+                visibility="PUBLIC", origin__contains=hostname)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -771,6 +773,22 @@ class FriendRequest(APIView):
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# ====== /api/author ======
+class Authors(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({
+                "query": "author",
+                "success": False,
+                "message": "Authentication is required for this endpoint."
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+        serializer = AuthorSerializer(authors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 # ====== /api/author/{author_id}/ ======
 
 
@@ -779,16 +797,15 @@ class AuthorDetail(APIView):
     def get(self, request, pk):
         # Returns the author object when requested
         author = get_object_or_404(Author, id__icontains=pk)
+        # Use the serializer!
+        author_serializer = AuthorSerializer(author)
+        author_dict = author_serializer.data
+        # We want to include friends as well, per the spec
+        friend_dicts = []
+        for friend in Friend.objects.get_friends(author):
+            friend_dicts.append(AuthorSerializer(friend).data)
+        author_dict["friends"] = friend_dicts
         response = {
-            "author": {
-                "id": author.id,
-                "displayName": author.displayName,
-                "firstName": author.first_name,
-                "lastName": author.last_name,
-                "email": author.email,
-                "url": author.url,
-                "host": author.host,
-                "github": author.github
-            }
+            "author": author_dict
         }
         return Response(response, status=status.HTTP_200_OK)

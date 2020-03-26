@@ -19,19 +19,11 @@ Ken Li
 
 ### Collaborators
 
-```
-Collaborator 1
-Collaborator 2
-...
-```
+`N/A`
 
 ### External Source Code
 
-```
-External Source 1
-External Source 2
-...
-```
+`N/A`
 
 ### Working With Teams
 
@@ -45,22 +37,18 @@ CMPUT404W20T00
 ```
 
 Distributed-Social-Networking
-│   ├── api                       (Api Files)
-│   ├── author                    (Custom User/Author Model)
+│   ├── api                       (API functionality)
+│   ├── author                    (Custom User (author) Model)
+│   ├── bootstrap                 (Custom Bootstrap CSS)
 │   ├── distributedsocialnetwork  (Django Files)
-│   ├── post                      (Post Files)
-│   ├── staticfiles               (Nothing So Far)
-│   └── templates                 (Template HTML)
+│   ├── friend                    (Friend Model)
+│   ├── post                      (Post Model)
+│   ├── staticfiles               (Django Static Files)
+│   └── templates                 (HTML Templates Files)
 ├── docs
 ```
 
-Manual Copy/Paste or use `tree -d -L [depth]`
-
-```
-├──
-|   └──
-|   |   ├──
-```
+Generate Directory Layout `tree -d -L [depth]`
 
 ## Instructions
 
@@ -117,7 +105,7 @@ sass ./bootstrap/scss/main.scss:bootstrap/css/bootstrap/bootstrap-override.css
 
 ```
 
-\$ ./manage.py runserver
+$ ./manage.py runserver
 
 ```
 
@@ -129,7 +117,7 @@ Link: https://dsnfof.herokuapp.com/
 
 ```
 
-\$ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
+$ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
 
 ```
 
@@ -154,9 +142,5 @@ Erin Torbiak
 Karim Baaba
 Kyle Richelhoff
 Olexiy Berjanskiia
-
-```
-
-```
 
 ```

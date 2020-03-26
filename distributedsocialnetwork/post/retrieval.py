@@ -76,57 +76,64 @@ def get_public_posts():
                 posts_json = response.json()
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
+                    # We should not have these posts in our database if they are from a site we have no connection to.
+                    if len(Node.objects.filter(hostname=post['origin'].split('posts/')[0])) == 1:
+                        author = sanitize_author(post["author"])
+                        post = sanitize_post(post)
+                        post = transformSource(post)
+                        author['displayName'] = author['displayName'] + \
+                            " (" + node.server_username + ")"
+                        author_parts = author['id'].split('/')
+                        authorID = author_parts[-1]
+                        if authorID == '':
+                            authorID = author_parts[-2]
+                        author['url'] = settings.FORMATTED_HOST_NAME + \
+                            'author/' + authorID
 
-                    author = sanitize_author(post["author"])
-                    post = sanitize_post(post)
-                    post = transformSource(post)
-                    author['displayName'] = author['displayName'] + \
-                        " (" + node.server_username + ")"
-                    author_parts = author['id'].split('/')
-                    authorID = author_parts[-1]
-                    if authorID == '':
-                        authorID = author_parts[-2]
-                    author['url'] = settings.FORMATTED_HOST_NAME + \
-                        'author/' + authorID
+                        if (len(Author.objects.filter(id=author['id'])) == 1):
+                            old_author = Author.objects.get(id=author['id'])
+                            author_serializer = AuthorSerializer(
+                                old_author, data=author)
+                        else:
+                            author_serializer = AuthorSerializer(data=author)
+                        if author_serializer.is_valid():
+                            try:
+                                author_serializer.save()
+                                print("saved author")
+                                # We now have the author saved, so we can move on to the posts
+                                if len(Post.objects.filter(id=post["id"])) == 1:
+                                    post_serializer = PostSerializer(
+                                        Post.objects.get(id=post["id"]), data=post)
+                                else:
+                                    post_serializer = PostSerializer(data=post)
+                                if post_serializer.is_valid():
+                                    try:
+                                        post_serializer.save()
+                                        print("Loaded post",
+                                              post_serializer.validated_data["title"])
+                                        public_posts = public_posts | Post.objects.filter(
+                                            id=post_serializer.validated_data["id"])
 
-                    if (len(Author.objects.filter(id=author['id'])) == 1):
-                        old_author = Author.objects.get(id=author['id'])
-                        author_serializer = AuthorSerializer(
-                            old_author, data=author)
+                                    except Exception as e:
+                                        print("Error saving post",
+                                              post_serializer.validated_data["title"], str(e))
+                                else:
+                                    print("Error encountered:",
+                                          post_serializer.errors)
+                            except Exception as e:
+                                print(e)
+                        else:
+                            print("Error encountered:",
+                                  author_serializer.errors)
                     else:
-                        author_serializer = AuthorSerializer(data=author)
-                    if author_serializer.is_valid():
-                        try:
-                            author_serializer.save()
-                            print("saved author")
-                            # We now have the author saved, so we can move on to the posts
+                        continue
 
-                            post_serializer = PostSerializer(data=post)
-                            if post_serializer.is_valid():
-                                try:
-                                    post_serializer.save()
-                                    print("Loaded post",
-                                          post_serializer.validated_data["title"])
-                                    public_posts = public_posts | Post.objects.filter(
-                                        id=post_serializer.validated_data["id"])
-
-                                except Exception as e:
-                                    print("Error saving post",
-                                          post_serializer.validated_data["title"], str(e))
-                            else:
-                                print("Error encountered:",
-                                      post_serializer.errors)
-                        except Exception as e:
-                            print(e)
-                    else:
-                        print("Error encountered:", author_serializer.errors)
     return public_posts
 
 
 def get_detailed_post(post_id):
     # Assumes that the post is already in our DB due to the fact that you are passing an ID.
     local_copy = get_object_or_404(Post, id=post_id)
-
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
         node = Node.objects.get(hostname__contains=local_split[2])
