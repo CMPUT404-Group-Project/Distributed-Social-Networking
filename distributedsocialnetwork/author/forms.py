@@ -6,15 +6,15 @@ from .models import Author
 
 class AuthorCreationForm(UserCreationForm):
     displayName = forms.CharField(
-        max_length=150, help_text="Required.Enter a display name.")
+        max_length=150, help_text="Required. Enter a display name.")
     email = forms.EmailField(
         max_length=255, help_text="Enter a valid email address.", required=False)
     first_name = forms.CharField(
         max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
         max_length=150, help_text="Enter your last name.", required=False)
-    github = forms.CharField(
-        max_length=255, help_text="Enter your GitHub profile url.", required=False)
+    github = forms.URLField(
+        max_length=255, help_text="Enter your GitHub profile url (e.g., http://github.com/username).", required=False)
 
     class Meta(UserCreationForm):
         model = Author
@@ -27,8 +27,8 @@ class AuthorChangeForm(UserChangeForm):
         max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
         max_length=150, help_text="Enter your last name.", required=False)
-    github = forms.CharField(
-        max_length=255, help_text="Enter your GitHub profile url.", required=False)
+    github = forms.URLField(
+        max_length=255, help_text="Enter your GitHub profile url (e.g., http://github.com/username).", required=False)
     bio = forms.CharField(
         max_length=160, help_text="Enter a short bio.", required=False)
     password = None
