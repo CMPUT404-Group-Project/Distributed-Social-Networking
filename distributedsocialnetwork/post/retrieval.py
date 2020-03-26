@@ -31,7 +31,9 @@ def sanitize_author(obj):
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
             obj["url"] = 'http://' + obj["url"]
-
+    if "github" in obj.keys():
+        if obj["github"] is None:
+            obj["github"] = ""
     return obj
 
 
@@ -46,8 +48,25 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        if type(obj["id"]) == type(1):
+            # We give it a UUID
+            obj["id"] = uuid.uuid4().hex
+        # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
+    if "description" in obj.keys():
+        if obj["description"] is None:
+            obj["description"] = ""
 
+    if "visibleTo" in obj.keys():
+        if obj["visibleTo"] is None:
+            obj["visibleTo"] = []
+
+    if "published" in obj.keys():
+        try:
+            obj["published"] = datetime.datetime.strptime(
+                obj["published"], "%Y-%m-%d").strftime('%Y-%m-%dT%H:%M:%S%z')
+        except:
+            pass
     obj["visibleTo"] = ','.join(obj["visibleTo"])
     obj["categories"] = ','.join(obj["visibleTo"])
 

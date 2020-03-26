@@ -34,6 +34,7 @@ def filter_posts(posts, author_id):
 
 def get_visible_posts(author_id):
     author = get_object_or_404(Author, id=author_id)
+    print(author)
     nodes = list(Node.objects.all())
     visible_posts = Post.objects.none()
     for node in nodes:
@@ -43,8 +44,10 @@ def get_visible_posts(author_id):
             url = node.api_url + 'author/posts'
             print("sending to ", url)
             # Include a header containing the Author's id, other nodes may not conform to this.
+            # response = requests.get(
+            #     url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
             response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
