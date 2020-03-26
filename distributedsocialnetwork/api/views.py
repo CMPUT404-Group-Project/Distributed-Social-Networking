@@ -770,7 +770,8 @@ class Authors(APIView):
                 "message": "Authentication is required for this endpoint."
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        authors = Author.objects.filter(is_node=False, is_staff=False)
+
+        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
         serializer = AuthorSerializer(authors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
