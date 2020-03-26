@@ -15,9 +15,14 @@ def send_friend_request(author_id, friend_id):
     author = Author.objects.get(id=author_id)
     # We now have the friend in the database
     friend = Author.objects.get(id=friend_id)
+    node = Node.objects.get(hostname=friend.host)
     # We format the following query:
     author_serializer = AuthorSerializer(friend)
     friend_data = dict(author_serializer.data)
+    # We modified some of the friend's author data going in, so we have to fix it before it goes out.
+    friend_data['url'] = friend_data['id']
+    friend_data['displayName'] = friend_data["displayName"].split(
+        (' (' + str(node.server_username) + ')'))[-2]
     author_serializer = AuthorSerializer(author)
     author_data = dict(author_serializer.data)
     query = {
@@ -25,6 +30,7 @@ def send_friend_request(author_id, friend_id):
         "author": author_data,
         "friend": friend_data,
     }
+    
     # Now we send it. But to what URL?
     node = Node.objects.get(hostname__icontains=friend.host)
     url = node.api_url + 'friendrequest'
@@ -73,43 +79,8 @@ def update_friends_list(author_id):
                     if len(Author.objects.filter(id=friend_id)) != 1:
                         # We must add them first
                         stored = False
-                        try:
-                            # We have to get them from the other server
-                            friend_uuid = friend_id.split('author/')[1]
-                            node = Node.objects.get(hostname=friend_host)
-                            url = node.api_url + 'author/' + friend_uuid
-                            response = requests.get(url, auth=(
-                                node.node_auth_username, node.node_auth_password), headers={
-                                'content-type': 'appliation/json', 'Accept': 'application/json'})
-                            if response.status_code == 200:
-                                print(response.json())
-                                if "author" in response.json().keys():
-                                    # One minor modification to the displayName:
-                                    author_data = sanitize_author(
-                                        response.json()["author"])
-                                    author_data['displayName'] = author_data['displayName'] + \
-                                        " (" + node.server_username + ")"
-                                    author_parts = author_data['id'].split('/')
-                                    authorID = author_parts[-1]
-                                    if authorID == '':
-                                        authorID = author_parts[-2]
-                                    author_data['url'] = settings.FORMATTED_HOST_NAME + \
-                                        'author/' + authorID
-                                    try:
-                                        author_serializer = AuthorSerializer(
-                                            data=author_data)
-                                        if author_serializer.is_valid():
-                                            author_serializer.save()
-                                            print("We did it")
-                                            stored = True
-                                        else:
-                                            print(author_serializer.errors)
-                                    except Exception as e:
-                                        print("Could not add author", e)
-                            else:
-                                print("failure")
-                        except Exception as e:
-                            print(e)
+                        if get_detailed_author(author_id=friend_id):
+                            stored = True
                     if stored:
                         # We aren't updating them, just adding reference to how they are friends
                         friend = Author.objects.get(id=friend_id)

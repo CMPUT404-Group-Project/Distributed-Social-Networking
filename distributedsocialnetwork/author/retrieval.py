@@ -34,6 +34,7 @@ def filter_posts(posts, author_id):
 
 def get_visible_posts(author_id):
     author = get_object_or_404(Author, id=author_id)
+    print(author)
     nodes = list(Node.objects.all())
     visible_posts = Post.objects.none()
     for node in nodes:
@@ -43,8 +44,10 @@ def get_visible_posts(author_id):
             url = node.api_url + 'author/posts'
             print("sending to ", url)
             # Include a header containing the Author's id, other nodes may not conform to this.
+            # response = requests.get(
+            #     url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
             response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
@@ -62,8 +65,23 @@ def get_visible_posts(author_id):
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        author['url'] = settings.FORMATTED_HOST_NAME + \
-                            'author/' + authorID
+
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
+                        try:
+                            uuid.UUID(authorID)
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
+                            else:
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
                         # Check if we already have that author in our db
                         # already. If so, update it.
                         if (len(Author.objects.filter(id=author['id'])) == 1):
@@ -115,6 +133,7 @@ def get_detailed_author(author_id):
                 return None
             local_split = author_id.split('author/')
             node = Node.objects.get(hostname=local_split[0])
+            # We have to convert the url to contain a UUID if it otherwise wont
             url = node.api_url + 'author/' + local_split[-1]
             response = requests.get(url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={

@@ -31,7 +31,9 @@ def sanitize_author(obj):
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
             obj["url"] = 'http://' + obj["url"]
-
+    if "github" in obj.keys():
+        if obj["github"] is None:
+            obj["github"] = ""
     return obj
 
 
@@ -46,8 +48,30 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        if type(obj["id"]) == type(1):
+            # We have to give it a unique UUID.
+            # We will give it one, but only if we have not seen it before
+            if len(Post.objects.filter(origin=obj["origin"])) == 0:
+                obj["id"] = str(uuid.uuid4().hex)
+            else:
+                obj["id"] = str(Post.objects.get(origin=obj["origin"]).id)
+        # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
 
+    if "description" in obj.keys():
+        if obj["description"] is None:
+            obj["description"] = ""
+
+    if "visibleTo" in obj.keys():
+        if obj["visibleTo"] is None:
+            obj["visibleTo"] = []
+
+    if "published" in obj.keys():
+        try:
+            obj["published"] = datetime.datetime.strptime(
+                obj["published"], "%Y-%m-%d").strftime('%Y-%m-%dT%H:%M:%S%z')
+        except:
+            pass
     obj["visibleTo"] = ','.join(obj["visibleTo"])
     obj["categories"] = ','.join(obj["visibleTo"])
 
@@ -87,9 +111,22 @@ def get_public_posts():
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        author['url'] = settings.FORMATTED_HOST_NAME + \
-                            'author/' + authorID
-
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
+                        try:
+                            uuid.UUID(authorID)
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
+                            else:
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
                         if (len(Author.objects.filter(id=author['id'])) == 1):
                             old_author = Author.objects.get(id=author['id'])
                             author_serializer = AuthorSerializer(
@@ -101,9 +138,9 @@ def get_public_posts():
                                 author_serializer.save()
                                 print("saved author")
                                 # We now have the author saved, so we can move on to the posts
-                                if len(Post.objects.filter(id=post["id"])) == 1:
+                                if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
-                                        Post.objects.get(id=post["id"]), data=post)
+                                        Post.objects.get(origin=post["origin"]), data=post)
                                 else:
                                     post_serializer = PostSerializer(data=post)
                                 if post_serializer.is_valid():
@@ -147,9 +184,16 @@ def get_detailed_post(post_id):
         if 'posts' not in post_json.keys():
             if "post" in post_json.keys():
                 post_json["posts"] = post_json["post"]
+            else:
+                # We don't have them in a wrapper, we should put them in one for compatibility
+                posts = [{}]
+                for attribute in post_json.keys():
+                    posts[0][attribute] = post_json[attribute]
+                post_json["posts"] = posts
         post_data = post_json['posts'][0]
-        post_data = transformSource(post_data)
         post = sanitize_post(post_data)
+        post_data = transformSource(post_data)
+
         post_serializer = PostSerializer(local_copy, data=post)
         if post_serializer.is_valid():
             print("it is valid")

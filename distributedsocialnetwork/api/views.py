@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
+import uuid
 
 # Create your views here.
 
@@ -487,7 +488,7 @@ class AuthUserPosts(APIView):
         else:
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(
-                visibility="PUBLIC", origin__contains=hostname)
+                visibility="PUBLIC", origin__contains=settings.FORMATTED_HOST_NAME)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -679,8 +680,22 @@ class FriendRequest(APIView):
                             authorID = author_parts[-1]
                             if authorID == '':
                                 authorID = author_parts[-2]
-                            author['url'] = settings.FORMATTED_HOST_NAME + \
-                                'author/' + authorID
+                            # Our author URLS need a UUID, so we have to check if it's not
+                            # The author's ID should never change!
+                            try:
+                                uuid.UUID(authorID)
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + authorID
+                            except:
+                                # We need to create a new one for the URL
+                                if len(Author.objects.filter(id=author["id"])) == 1:
+                                    # We already made one for them
+                                    author['url'] = Author.objects.get(
+                                        id=author["id"]).url
+                                else:
+                                    # Give them a new one.
+                                    author['url'] = settings.FORMATTED_HOST_NAME + \
+                                        'author/' + str(uuid.uuid4().hex)
                             # We try serializing and saving the author
                             author_serializer = AuthorSerializer(
                                 data=author)
@@ -712,7 +727,6 @@ class FriendRequest(APIView):
                     # Author already exists in our system.
                     # If the user is an author, we can send the friend request if they are the one sending it
                     # If the user is a node, we send the friend request if they have the same host as the one sending it
-                    print(request.data["author"]["host"])
                     if request.user.is_node:
                         if request.data["author"]["host"] != request.user.host:
                             # We send a 401. They can't send requests on behalf of users from other hosts.
