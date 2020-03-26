@@ -15,9 +15,14 @@ def send_friend_request(author_id, friend_id):
     author = Author.objects.get(id=author_id)
     # We now have the friend in the database
     friend = Author.objects.get(id=friend_id)
+    node = Node.objects.get(hostname=friend.host)
     # We format the following query:
     author_serializer = AuthorSerializer(friend)
     friend_data = dict(author_serializer.data)
+    # We modified some of the friend's author data going in, so we have to fix it before it goes out.
+    friend_data['url'] = friend_data['id']
+    friend_data['displayName'] = friend_data["displayName"].split(
+        (' (' + str(node.server_username) + ')'))[-2]
     author_serializer = AuthorSerializer(author)
     author_data = dict(author_serializer.data)
     query = {
@@ -26,7 +31,7 @@ def send_friend_request(author_id, friend_id):
         "friend": friend_data,
     }
     # Now we send it. But to what URL?
-    node = Node.objects.get(hostname=friend.host)
+
     url = node.api_url + 'friendrequest'
     # And we send it off
     response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
@@ -68,7 +73,8 @@ def update_friends_list(author_id):
                     if len(Author.objects.filter(id=friend_id)) != 1:
                         # We must add them first
                         stored = False
-                        get_detailed_author(author_id=friend_id)
+                        if get_detailed_author(author_id=friend_id):
+                            stored = True
                     if stored:
                         # We aren't updating them, just adding reference to how they are friends
                         friend = Author.objects.get(id=friend_id)
