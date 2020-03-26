@@ -99,20 +99,40 @@ def get_visible_posts(author_id):
 
 
 def get_detailed_author(author_id):
-    local_copy = get_object_or_404(Author, id__icontains=author_id)
-    if (local_copy.origin != local_copy.source):
-        local_split = local_copy.origin.split('/')
-        node = Node.objects.get(hostname__contains=local_split[2])
+    # We want to either store the author for the first time, or save them
+
+    # local_copy = get_object_or_404(Author, id__icontains=author_id)
+    if (settings.FORMATTED_HOST_NAME != author_id.split('author/')[0]):
+        if len(Node.objects.filter(hostname=author_id.split('author/')[0])) != 1:
+            # We don't have the credentials to get this user's info
+            print(hostname=author_id.split('author/')[0])
+            return None
+        local_split = author_id.split('author/')
+        node = Node.objects.get(hostname=local_split[0])
         url = node.api_url + 'author/' + local_split[-1]
         response = requests.get(url, auth=(
             node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'appliation/json', 'Accept': 'application/json'})
-        if reponse.status_code == 200:
+        if response.status_code == 200:
             author_json = response.json()
         author_data = author_json['author']
-        author_data = transformSource(author_data)
         author = sanitize_author(author_data)
-        author_serializer = AuthorSerializer(local_copy, data=author)
+        # A couple of modifications so we can easily tell they are a foreign author
+        author['displayName'] = author['displayName'] + \
+            " (" + node.server_username + ")"
+        author_parts = author['id'].split('/')
+        authorID = author_parts[-1]
+        if authorID == '':
+            authorID = author_parts[-2]
+        author['url'] = settings.FORMATTED_HOST_NAME + \
+            'author/' + authorID
+        print(author_data)
+        if len(Author.objects.filter(id=author_id)) == 1:
+            # We have an author already, we need to update it
+            author_serializer = AuthorSerializer(
+                Author.objects.get(id=author_id), data=author)
+        else:
+            author_serializer = AuthorSerializer(data=author)
         if author_serializer.is_valid():
             print("it is valid")
             try:
@@ -126,10 +146,11 @@ def get_detailed_author(author_id):
                       author_serializer.validated_data["displayName"], str(e))
         else:
             print("Error encountered:", author_serializer.errors)
-            return local_copy
+            return None
         return new_copy
     else:
-        return local_copy
+        # We have this user already, it belongs to our server
+        return get_object_or_404(Author, id=author_id)
 
 
 def transformSource(author_obj):
