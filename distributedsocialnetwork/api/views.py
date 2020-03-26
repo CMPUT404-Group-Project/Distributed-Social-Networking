@@ -472,21 +472,22 @@ class AuthUserPosts(APIView):
                 # We assume that we currently have their users stored in our system.
                 hostname = settings.FORMATTED_HOST_NAME
                 public_posts = Post.objects.filter(
-                    visibility="PUBLIC", source__icontains=hostname)
+                    visibility="PUBLIC", origin__contains=hostname)
                 privated_posts = Post.objects.none()
                 friend_posts = Post.objects.none()
                 foaf_posts = Post.objects.none()
                 for author in list(Author.objects.filter(host=request.user.host)):
                     # For each author belonging to that server, we add the posts they are able to see
                     privated_posts = privated_posts | Post.objects.filter(
-                        visibility="PRIVATE", visibleTo__icontains=author.id)
+                        visibility="PRIVATE", visibleTo__icontains=author.id, origin__contains=hostname)
                     friend_posts = friend_posts | Post.objects.filter(
-                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author))
+                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author), origin__contains=hostname)
                     # TODO: FOAF
                 post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
-            post_query_set = Post.objects.filter(visibility="PUBLIC")
+            post_query_set = Post.objects.filter(
+                visibility="PUBLIC", origin__contains=hostname)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
