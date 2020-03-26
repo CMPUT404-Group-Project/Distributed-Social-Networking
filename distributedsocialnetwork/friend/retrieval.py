@@ -4,6 +4,8 @@ from friend.models import Friend, Follower
 from author.serializers import AuthorSerializer
 from post.retrieval import sanitize_author
 from author.retrieval import get_detailed_author
+from rest_framework.response import Response
+from rest_framework import status
 from django.conf import settings
 import requests
 
@@ -15,7 +17,9 @@ def send_friend_request(author_id, friend_id):
     author = Author.objects.get(id=author_id)
     # We now have the friend in the database
     friend = Author.objects.get(id=friend_id)
-    node = Node.objects.get(hostname=friend.host)
+    if len(Node.objects.filter(hostname__contains=friend.host)) != 1:
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    node = Node.objects.get(hostname__contains=friend.host)
     # We format the following query:
     author_serializer = AuthorSerializer(friend)
     friend_data = dict(author_serializer.data)
@@ -35,8 +39,10 @@ def send_friend_request(author_id, friend_id):
     node = Node.objects.get(hostname__icontains=friend.host)
     url = node.api_url + 'friendrequest'
     # And we send it off
-    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                             'content-type': 'application/json', 'Accept': 'application/json'})
+    try:
+        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
+    except:
     if response.status_code != 200:
         # Let us try again for the response, with a backslash
         url = url + '/'
@@ -52,17 +58,25 @@ def update_friends_list(author_id):
     # returns the response given
 
     author = Author.objects.get(id=author_id)
-    author_uuid = author.id.split('author/')[1]
-    if author.host[-1] != '/':
-        host = author.host + '/'
+    # We should be sending to the original server
+    # To get the url, we strip the id, replace with the api_url, and send that
+    try:
+        node = Node.objects.get(hostname=author.host)
+    except:
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    api_url = node.api_url
+    url = api_url + 'author/' + author_id.split('author/')[-1]
+
+    if url[-1] == '/':
+        url += 'friends'
     else:
-        host = author.host
-    # We get the node associated with that author
-    node = Node.objects.get(hostname=host)
-    url = node.api_url + 'author/' + author_uuid + '/friends'
+        url += '/friends'
     # And so we send the request
-    response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                            'content-type': 'application/json', 'Accept': 'application/json'})
+    try:
+        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
+    except:
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if response.status_code == 200:
         friends_response = response.json()
         if "authors" in friends_response:
@@ -72,8 +86,7 @@ def update_friends_list(author_id):
             # - If they are from a host we are connected to but have not seen before, we save them in the database, and we save the friendship.
             for friend_id in friends_response["authors"]:
                 friend_host = author_id.split('author/')[0]
-                print(friend_host)
-                if len(Node.objects.filter(hostname=host)) == 1:
+                if len(Node.objects.filter(hostname=friend_host)) == 1:
                     stored = True
                     # We have talked to these people before, so let's do some work
                     if len(Author.objects.filter(id=friend_id)) != 1:

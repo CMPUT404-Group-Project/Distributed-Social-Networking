@@ -24,13 +24,13 @@ def sanitize_author(obj):
         del obj["display_name"]
     if "id" in obj.keys():
         if obj["id"][:4] != "http":
-            obj["id"] = 'http://' + obj['id']
+            obj["id"] = 'https://' + obj['id']
     if "host" in obj.keys():
         if obj["host"][:4] != 'http':
-            obj["host"] = 'http://' + obj["host"]
+            obj["host"] = 'https://' + obj["host"]
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
-            obj["url"] = 'http://' + obj["url"]
+            obj["url"] = 'https://' + obj["url"]
     if "github" in obj.keys():
         if obj["github"] is None:
             obj["github"] = ""
@@ -101,7 +101,9 @@ def get_public_posts():
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
                     # We should not have these posts in our database if they are from a site we have no connection to.
-                    if len(Node.objects.filter(hostname=post['origin'].split('posts/')[0])) == 1:
+                    hostname = post['origin'].split('posts/')[0]
+                    if len(Node.objects.filter(hostname=hostname)) == 1:
+
                         author = sanitize_author(post["author"])
                         post = sanitize_post(post)
                         post = transformSource(post)
@@ -136,7 +138,8 @@ def get_public_posts():
                         if author_serializer.is_valid():
                             try:
                                 author_serializer.save()
-                                print("saved author")
+                                print("saved author",
+                                      author_serializer.validated_data["displayName"])
                                 # We now have the author saved, so we can move on to the posts
                                 if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
