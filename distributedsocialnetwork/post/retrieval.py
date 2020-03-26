@@ -203,30 +203,32 @@ def get_comments(post_id):
                             comments.append(comment)
                             author = sanitize_author(comment["author"])
                             # Update author info in the db for the comment
-                            if (len(Author.objects.filter(id=author['id'])) == 1):
-                                old_author = Author.objects.get(id=author['id'])
-                                author_serializer = AuthorSerializer(
-                                    old_author, data=author)
-                            else:
-                                author_serializer = AuthorSerializer(data=author)
-                            if author_serializer.is_valid():
-                                try:
-                                    author_serializer.save()
-                                except Exception as e:
-                                    print("Error saving author", 
-                                        author_serializer.validated_data["displayName"], str(e))
-                            else:
-                                print("Error encountered:", author_serializer.errors)
-                            comment_serializer = CommentSerializer(comment)
-                            if comment_serializer.is_valid():
-                                try:
-                                    comment_serializer.save()
-                                except Exception as e:
-                                    print("Error saving comment", 
-                                        comment_serializer.validated_data["id"], str(e))
-                            else:
-                                print("Error encountered:", comment_serializer.errors) 
-		    post = transformSource(post)
+                            try:
+                                if (len(Author.objects.filter(id=author['id'])) == 1):
+                                    old_author = Author.objects.get(id=author['id'])
+                                    author_serializer = AuthorSerializer(
+                                        old_author, data=author)
+                                else:
+                                    author_serializer = AuthorSerializer(data=author)
+                                if author_serializer.is_valid():
+                                    try:
+                                        author_serializer.save()
+                                    except Exception as e:
+                                        print("Error saving author", 
+                                            author_serializer.validated_data["displayName"], str(e))
+                                else:
+                                    print("Error encountered:", author_serializer.errors)
+                                comment_serializer = CommentSerializer(data=comment)
+                                if comment_serializer.is_valid():
+                                    try:
+                                        comment_serializer.save()
+                                    except Exception as e:
+                                        print("Error saving comment", 
+                                            comment_serializer.validated_data["id"], str(e))
+                                else:
+                                    print("Error encountered:", comment_serializer.errors)
+                            except Exception as e:
+                                print("Error serializing author & comment:", comment["id"], str(e)) 
     # Return comments with the newly appended comments
     return comments
 
