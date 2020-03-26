@@ -1,6 +1,7 @@
 {% extends 'base.html' %} 
 {% load markup_tags %}
 {% block title %} {{ author.displayName }} {% endblock %}
+{% block nav-profile%}<a class="nav-link active" href="{{request.user.url}}">{{ request.user|title }}</a>{% endblock %}
 {% block stylesheet %}
 <style>
   .markdown-content{
