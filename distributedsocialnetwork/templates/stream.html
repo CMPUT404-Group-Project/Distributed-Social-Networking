@@ -1,0 +1,36 @@
+{% load markup_tags %}
+{% for post in posts %}
+<div class="card m-2 post">
+    <div class="card-body">
+        <a class="card-title" href="{{ post.source }}">
+            <div class="row-12">
+                <h5>{{ post.title }}</h5>
+            </div>
+        </a>
+        <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
+        {% if post.contentType == 'text/markdown' %}
+        <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" |  truncatechars_html:500}}</div>
+        {% elif post.contentType == 'image/jpeg;base64' %}
+        <div class="card-text"><img src="data:image/jpeg;base64,{{ post.content }}"></div>
+        {% elif post.contentType == 'image/png;base64' %}
+        <div class="card-text"><img src="data:image/png;base64,{{ post.content }}"></div>
+        {% else %}
+        <p class="card-text">{{ post.content | truncatechars:500}}</p>
+        {% endif %}
+    </div>
+    <div class="card-footer text-muted text-right p-2">
+        <a href="{{post.author.url}}"><p class="m-0">{{ post.author.displayName }}</p></a>
+        <p class="small m-0">{{ post.published }}</p>
+    </div>
+</div>
+{% endfor %}
+<!-- Placeholder card if there are no posts to see -->
+{% if posts.count == 0 %}
+<div class="card m-2 post">
+  <div class="card-body">
+    <div class="card-title">
+      <h5>There are no posts available 😞</h5>
+    </div>
+  </div>
+</div>
+{% endif %}

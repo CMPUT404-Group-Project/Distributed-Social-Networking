@@ -19,8 +19,21 @@
   background-color: var(--primary-color);
 }
 
+#tabs {
+  padding-top: 0em;
+  background-color: white;
+}
+
 .nav-link {
   color: var(--accent-color);
+}
+
+.nav-link h2 {
+  color: gray;
+}
+
+.nav-link.active h2 {
+  color: var(--primary-color);
 }
 
 .btn-outline-primary,
@@ -46,6 +59,7 @@ a {
 .stream {
   background-color: white;
   padding-top: 0.5rem;
+  min-height: 90vh;
 }
 
 .sidebar {
@@ -65,10 +79,6 @@ a {
 
 .featured-author > .card-body {
   padding: 0.5rem;
-}
-
-#stream {
-  min-height: 90vh;
 }
 
 footer {
