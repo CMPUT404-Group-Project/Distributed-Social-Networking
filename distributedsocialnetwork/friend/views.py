@@ -63,7 +63,6 @@ def follow_author(request):
             return redirect(show_friends)
         else:
             print(response.status_code)
-            print(response.json())
             return redirect(show_friends)
 
     return redirect(show_friends)
@@ -97,7 +96,6 @@ def accept_request(request):
                 # We can't add them as a friend right now.
                 # TODO: Popup message saying there was an error
                 print(response.status_code)
-                print(response.json())
                 return redirect(show_friends)
         FriendManager.add_friend("", current_user, to_friend)
     return redirect(show_friends)

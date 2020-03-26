@@ -25,7 +25,7 @@ class Post(models.Model):
     title = models.CharField(max_length=100)
     source = models.URLField(max_length=100)
     origin = models.URLField(max_length=100)
-    description = models.CharField(max_length=120)
+    description = models.CharField(max_length=120, blank=True)
     contentType = models.CharField(
         max_length=20, choices=CONTENT_TYPE_CHOICES, default='text/plain')
     content = models.TextField()

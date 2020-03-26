@@ -657,13 +657,13 @@ class AuthUserPosts(APITestCase):
 
         # First post will be a public post written by author 1
         self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source=settings.FORMATTED_HOST_NAME,
-                                         origin="http://firstpost.com/origin", description="This is the first post",
+                                         origin=settings.FORMATTED_HOST_NAME, description="This is the first post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Second post will be a private post written by author 1, shared with author 2 and the foreign author
         self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source=settings.FORMATTED_HOST_NAME,
-                                         origin="http://secondpost.com/origin", description="This is the second post",
+                                         origin=settings.FORMATTED_HOST_NAME, description="This is the second post",
                                          author=self.author1, categories="", published=datetime.datetime(
             2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=str(self.author2.id) + ',' + str(self.foreignAuthor.id), unlisted=False)
 
@@ -699,8 +699,8 @@ class AuthUserPosts(APITestCase):
     def test_get_list_as_user(self):
         url = reverse('auth-posts')
         response = self.client.get(url, format='json')
-        # Without authenticating, we should be able to retrieve 2 posts
-        self.assertEqual(len(response.data["posts"]), 2)
+        # Without authenticating, we should be able to retrieve 1 post
+        self.assertEqual(len(response.data["posts"]), 1)
         # We log in as author1
         self.client.force_authenticate(user=self.author1)
         response = self.client.get(url, format='json')
@@ -721,8 +721,8 @@ class AuthUserPosts(APITestCase):
         url = reverse('auth-posts')
         self.client.force_authenticate(user=self.node_author)
         response = self.client.get(url, format='json')
-        # They should be able to see 3 posts.
-        self.assertEqual(len(response.data["posts"]), 3)
+        # They should be able to see posts that originated from our server.
+        self.assertEqual(len(response.data["posts"]), 2)
 
 
 class AuthorPosts(APITestCase):
