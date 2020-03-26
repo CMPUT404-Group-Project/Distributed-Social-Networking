@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load markup_tags %}
 {% block nav-home %}
 <a class="nav-link active" href="{% url 'home' %}">Home</a>
 {% endblock  %}
@@ -28,37 +27,26 @@
     <div class="row p-2 m-2 justify-content-center">
         <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="/friends">Friends</a>
     </div>
-    {%endif%}
+    {% endif %}
   </div>
-  <div class="col-8 stream bg-white pb-3" id="stream">
-    <div class="row p-2 justify-content-left">
-      <h2>Stream</h2>
-    </div>
-    {% for post in posts %}
-    <div class="card m-2 post">
-      <div class="card-body">
-        <a class="card-title" href="{{ post.source }}">
-          <div class="row-12">
-            <h5>{{ post.title }}</h5>
+  <div class="col-8 stream bg-white pb-3">
+    <ul id="tabs" class="nav nav-tabs" data-tabs="tabs">
+      <li class="nav-item stream-tab-item">
+        <a href="#stream" class="nav-link active" data-toggle="tab"><h2>Stream</h2></a>
+      </li>
+      <li class="nav-item stream-tab-item">
+        <a href="#explore" class="nav-link" data-toggle="tab" onclick="get_foreign_posts()"><h2>Explore</h2></a>
+      </li>
+    </ul>
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="stream">
+          {% include "stream.html" %}
+      </div>
+      <div class="tab-pane fade" id="explore">
+          <div id="foreign_posts">
           </div>
-        </a>
-        <h6 class="card-subtitle mb-2 text-muted">{{ post.description }}</h6>
-        {% if post.contentType == 'text/markdown' %}
-        <div class="markdown-content col-6">{{ post.content | apply_markup:"markdown" |  truncatechars_html:500}}</div>
-        {% elif post.contentType == 'image/jpeg;base64' %}
-        <div class="card-text"><img src="data:image/jpeg;base64,{{ post.content }}"></div>
-        {% elif post.contentType == 'image/png;base64' %}
-        <div class="card-text"><img src="data:image/png;base64,{{ post.content }}"></div>
-        {% else %}
-        <p class="card-text">{{ post.content | truncatechars:500}}</p>
-        {% endif %}
-      </div>
-      <div class="card-footer text-muted text-right p-2">
-        <a href="{{post.author.url}}"><p class="m-0">{{ post.author.displayName }}</p></a>
-        <p class="small m-0">{{ post.published }}</p>
       </div>
     </div>
-    {% endfor %}
   </div>
   <div class="col text-right sidebar bg-light">
     <div class="row justify-content-center">
@@ -78,4 +66,16 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+  function get_foreign_posts(){
+    xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        document.getElementById('foreign_posts').innerHTML = this.responseText;
+    };
+    xhttp.open("GET","/api/posts/foreign", true);
+    xhttp.send();
+  }
+  window.onload = get_foreign_posts;
+</script>
 {% endblock content %}

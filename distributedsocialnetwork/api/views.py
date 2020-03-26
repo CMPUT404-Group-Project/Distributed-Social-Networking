@@ -10,7 +10,7 @@ from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
 
@@ -148,6 +148,19 @@ class VisiblePosts(APIView):
             post["comments"] = comment_list_dict["comments"]
         response["posts"] = post_list_dict["posts"]
         return Response(response)
+
+# ====== /api/posts/foreign/ ======
+
+
+class ForeignPosts(APIView):
+    # Retrieves all posts not originating from this server.
+    # Returned as HTML for simple front-end integration.
+    def get(self, request):
+        posts = Post.objects.filter(visibility="PUBLIC").exclude(
+            origin__icontains=settings.FORMATTED_HOST_NAME)
+        context = {}
+        context["posts"] = posts
+        return render(request, 'stream.html', context)
 
 # ====== /api/posts/<post_id> ======
 
@@ -767,16 +780,15 @@ class AuthorDetail(APIView):
     def get(self, request, pk):
         # Returns the author object when requested
         author = get_object_or_404(Author, id__icontains=pk)
+        # Use the serializer!
+        author_serializer = AuthorSerializer(author)
+        author_dict = author_serializer.data
+        # We want to include friends as well, per the spec
+        friend_dicts = []
+        for friend in Friend.objects.get_friends(author):
+            friend_dicts.append(AuthorSerializer(friend).data)
+        author_dict["friends"] = friend_dicts
         response = {
-            "author": {
-                "id": author.id,
-                "displayName": author.displayName,
-                "firstName": author.first_name,
-                "lastName": author.last_name,
-                "email": author.email,
-                "url": author.url,
-                "host": author.host,
-                "github": author.github
-            }
+            "author": author_dict
         }
         return Response(response, status=status.HTTP_200_OK)
