@@ -27,7 +27,6 @@ def send_friend_request(author_id, friend_id):
     }
     # Now we send it. But to what URL?
     node = Node.objects.get(hostname__icontains=friend.host)
-    print(query)
     url = node.api_url + 'friendrequest'
     # And we send it off
     response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
