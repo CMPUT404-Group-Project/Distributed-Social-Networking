@@ -182,7 +182,7 @@ def get_comments(post_id):
     comments = Comment.objects.filter(post_id=post_id)
     comm_ids = []
     for comment in comments:
-        comm_ids.append(comment[id])
+        comm_ids.append(comment["id"])
     nodes = list(Node.objects.all())
     for node in nodes:
         if node.node_auth_username != "":
@@ -199,7 +199,7 @@ def get_comments(post_id):
                     post = sanitize_post(post)
                     for comment in post.comments:
                         # Add comment to list of comments to return if it is not already there
-                        if comment[id] not in comm_ids:
+                        if comment["id"] not in comm_ids:
                             comments.append(comment)
                             author = sanitize_author(comment["author"])
                             # Update author info in the db for the comment
