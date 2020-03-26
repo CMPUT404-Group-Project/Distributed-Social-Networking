@@ -34,7 +34,7 @@ def send_friend_request(author_id, friend_id):
         "author": author_data,
         "friend": friend_data,
     }
-    
+
     # Now we send it. But to what URL?
     node = Node.objects.get(hostname__icontains=friend.host)
     url = node.api_url + 'friendrequest'
@@ -43,11 +43,15 @@ def send_friend_request(author_id, friend_id):
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
     except:
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if response.status_code != 200:
         # Let us try again for the response, with a backslash
-        url = url + '/'
-        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-            'content-type': 'application/json', 'Accept': 'application/json'})
+        try:
+            url = url + '/'
+            response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                'content-type': 'application/json', 'Accept': 'application/json'})
+        except:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return response
 
 
