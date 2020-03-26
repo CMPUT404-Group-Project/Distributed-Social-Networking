@@ -31,7 +31,9 @@ def sanitize_author(obj):
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
             obj["url"] = 'http://' + obj["url"]
-
+    if "github" in obj.keys():
+        if obj["github"] is None:
+            obj["github"] = ""
     return obj
 
 
@@ -46,8 +48,30 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        if type(obj["id"]) == type(1):
+            # We have to give it a unique UUID.
+            # We will give it one, but only if we have not seen it before
+            if len(Post.objects.filter(origin=obj["origin"])) == 0:
+                obj["id"] = str(uuid.uuid4().hex)
+            else:
+                obj["id"] = str(Post.objects.get(origin=obj["origin"]).id)
+        # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
 
+    if "description" in obj.keys():
+        if obj["description"] is None:
+            obj["description"] = ""
+
+    if "visibleTo" in obj.keys():
+        if obj["visibleTo"] is None:
+            obj["visibleTo"] = []
+
+    if "published" in obj.keys():
+        try:
+            obj["published"] = datetime.datetime.strptime(
+                obj["published"], "%Y-%m-%d").strftime('%Y-%m-%dT%H:%M:%S%z')
+        except:
+            pass
     obj["visibleTo"] = ','.join(obj["visibleTo"])
     obj["categories"] = ','.join(obj["visibleTo"])
 
@@ -76,57 +100,77 @@ def get_public_posts():
                 posts_json = response.json()
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
-
-                    author = sanitize_author(post["author"])
-                    post = sanitize_post(post)
-                    post = transformSource(post)
-                    author['displayName'] = author['displayName'] + \
-                        " (" + node.server_username + ")"
-                    author_parts = author['id'].split('/')
-                    authorID = author_parts[-1]
-                    if authorID == '':
-                        authorID = author_parts[-2]
-                    author['url'] = settings.FORMATTED_HOST_NAME + \
-                        'author/' + authorID
-
-                    if (len(Author.objects.filter(id=author['id'])) == 1):
-                        old_author = Author.objects.get(id=author['id'])
-                        author_serializer = AuthorSerializer(
-                            old_author, data=author)
-                    else:
-                        author_serializer = AuthorSerializer(data=author)
-                    if author_serializer.is_valid():
+                    # We should not have these posts in our database if they are from a site we have no connection to.
+                    if len(Node.objects.filter(hostname=post['origin'].split('posts/')[0])) == 1:
+                        author = sanitize_author(post["author"])
+                        post = sanitize_post(post)
+                        post = transformSource(post)
+                        author['displayName'] = author['displayName'] + \
+                            " (" + node.server_username + ")"
+                        author_parts = author['id'].split('/')
+                        authorID = author_parts[-1]
+                        if authorID == '':
+                            authorID = author_parts[-2]
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
                         try:
-                            author_serializer.save()
-                            print("saved author")
-                            # We now have the author saved, so we can move on to the posts
-
-                            post_serializer = PostSerializer(data=post)
-                            if post_serializer.is_valid():
-                                try:
-                                    post_serializer.save()
-                                    print("Loaded post",
-                                          post_serializer.validated_data["title"])
-                                    public_posts = public_posts | Post.objects.filter(
-                                        id=post_serializer.validated_data["id"])
-
-                                except Exception as e:
-                                    print("Error saving post",
-                                          post_serializer.validated_data["title"], str(e))
+                            uuid.UUID(authorID)
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
                             else:
-                                print("Error encountered:",
-                                      post_serializer.errors)
-                        except Exception as e:
-                            print(e)
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
+                        if (len(Author.objects.filter(id=author['id'])) == 1):
+                            old_author = Author.objects.get(id=author['id'])
+                            author_serializer = AuthorSerializer(
+                                old_author, data=author)
+                        else:
+                            author_serializer = AuthorSerializer(data=author)
+                        if author_serializer.is_valid():
+                            try:
+                                author_serializer.save()
+                                print("saved author")
+                                # We now have the author saved, so we can move on to the posts
+                                if len(Post.objects.filter(origin=post["origin"])) == 1:
+                                    post_serializer = PostSerializer(
+                                        Post.objects.get(origin=post["origin"]), data=post)
+                                else:
+                                    post_serializer = PostSerializer(data=post)
+                                if post_serializer.is_valid():
+                                    try:
+                                        post_serializer.save()
+                                        print("Loaded post",
+                                              post_serializer.validated_data["title"])
+                                        public_posts = public_posts | Post.objects.filter(
+                                            id=post_serializer.validated_data["id"])
+
+                                    except Exception as e:
+                                        print("Error saving post",
+                                              post_serializer.validated_data["title"], str(e))
+                                else:
+                                    print("Error encountered:",
+                                          post_serializer.errors)
+                            except Exception as e:
+                                print(e)
+                        else:
+                            print("Error encountered:",
+                                  author_serializer.errors)
                     else:
-                        print("Error encountered:", author_serializer.errors)
+                        continue
+
     return public_posts
 
 
 def get_detailed_post(post_id):
     # Assumes that the post is already in our DB due to the fact that you are passing an ID.
     local_copy = get_object_or_404(Post, id=post_id)
-
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
         node = Node.objects.get(hostname__contains=local_split[2])
@@ -140,9 +184,16 @@ def get_detailed_post(post_id):
         if 'posts' not in post_json.keys():
             if "post" in post_json.keys():
                 post_json["posts"] = post_json["post"]
+            else:
+                # We don't have them in a wrapper, we should put them in one for compatibility
+                posts = [{}]
+                for attribute in post_json.keys():
+                    posts[0][attribute] = post_json[attribute]
+                post_json["posts"] = posts
         post_data = post_json['posts'][0]
-        post_data = transformSource(post_data)
         post = sanitize_post(post_data)
+        post_data = transformSource(post_data)
+
         post_serializer = PostSerializer(local_copy, data=post)
         if post_serializer.is_valid():
             print("it is valid")

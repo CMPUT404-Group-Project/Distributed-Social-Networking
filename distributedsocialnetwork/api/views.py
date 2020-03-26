@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
+import uuid
 
 # Create your views here.
 
@@ -472,21 +473,22 @@ class AuthUserPosts(APIView):
                 # We assume that we currently have their users stored in our system.
                 hostname = settings.FORMATTED_HOST_NAME
                 public_posts = Post.objects.filter(
-                    visibility="PUBLIC", source__icontains=hostname)
+                    visibility="PUBLIC", origin__contains=hostname)
                 privated_posts = Post.objects.none()
                 friend_posts = Post.objects.none()
                 foaf_posts = Post.objects.none()
                 for author in list(Author.objects.filter(host=request.user.host)):
                     # For each author belonging to that server, we add the posts they are able to see
                     privated_posts = privated_posts | Post.objects.filter(
-                        visibility="PRIVATE", visibleTo__icontains=author.id)
+                        visibility="PRIVATE", visibleTo__icontains=author.id, origin__contains=hostname)
                     friend_posts = friend_posts | Post.objects.filter(
-                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author))
+                        visibility="FRIENDS", author__in=Friend.objects.get_friends(author), origin__contains=hostname)
                     # TODO: FOAF
                 post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
-            post_query_set = Post.objects.filter(visibility="PUBLIC")
+            post_query_set = Post.objects.filter(
+                visibility="PUBLIC", origin__contains=settings.FORMATTED_HOST_NAME)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -678,8 +680,22 @@ class FriendRequest(APIView):
                             authorID = author_parts[-1]
                             if authorID == '':
                                 authorID = author_parts[-2]
-                            author['url'] = settings.FORMATTED_HOST_NAME + \
-                                'author/' + authorID
+                            # Our author URLS need a UUID, so we have to check if it's not
+                            # The author's ID should never change!
+                            try:
+                                uuid.UUID(authorID)
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + authorID
+                            except:
+                                # We need to create a new one for the URL
+                                if len(Author.objects.filter(id=author["id"])) == 1:
+                                    # We already made one for them
+                                    author['url'] = Author.objects.get(
+                                        id=author["id"]).url
+                                else:
+                                    # Give them a new one.
+                                    author['url'] = settings.FORMATTED_HOST_NAME + \
+                                        'author/' + str(uuid.uuid4().hex)
                             # We try serializing and saving the author
                             author_serializer = AuthorSerializer(
                                 data=author)
@@ -711,7 +727,6 @@ class FriendRequest(APIView):
                     # Author already exists in our system.
                     # If the user is an author, we can send the friend request if they are the one sending it
                     # If the user is a node, we send the friend request if they have the same host as the one sending it
-                    print(request.data["author"]["host"])
                     if request.user.is_node:
                         if request.data["author"]["host"] != request.user.host:
                             # We send a 401. They can't send requests on behalf of users from other hosts.
@@ -771,6 +786,22 @@ class FriendRequest(APIView):
             "query": "friendrequest",
             "success": False,
             "message": ("Must be of type application/json. Type was " + str(request.headers["Content-Type"]))}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ====== /api/author ======
+class Authors(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({
+                "query": "author",
+                "success": False,
+                "message": "Authentication is required for this endpoint."
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+        serializer = AuthorSerializer(authors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # ====== /api/author/{author_id}/ ======
 
