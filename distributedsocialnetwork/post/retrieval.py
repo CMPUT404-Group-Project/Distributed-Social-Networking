@@ -49,10 +49,15 @@ def sanitize_post(obj):
 
     if "id" in obj.keys():
         if type(obj["id"]) == type(1):
-            # We have to give it a unique UUID. We will generate one based on its origin:
-            obj["id"] = uuid.UUID(bytes=str.encode(obj["origin"])).hex
+            # We have to give it a unique UUID.
+            # We will give it one, but only if we have not seen it before
+            if len(Post.objects.filter(origin=obj["origin"])) == 0:
+                obj["id"] = str(uuid.uuid4().hex)
+            else:
+                obj["id"] = str(Post.objects.get(origin=obj["origin"]).id)
         # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
+
     if "description" in obj.keys():
         if obj["description"] is None:
             obj["description"] = ""
@@ -106,14 +111,22 @@ def get_public_posts():
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        # Our author URLS need a UUID, so let's convert it if need be
-                        if type(author_parts[-2]) == type(1):
-                            author['url'] = settings.FORMATTED_HOST_NAME + \
-                                'author/' + uuid.UUID(int=authorID)
-                        else:
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
+                        try:
+                            uuid.UUID(authorID)
                             author['url'] = settings.FORMATTED_HOST_NAME + \
                                 'author/' + authorID
-
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
+                            else:
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
                         if (len(Author.objects.filter(id=author['id'])) == 1):
                             old_author = Author.objects.get(id=author['id'])
                             author_serializer = AuthorSerializer(

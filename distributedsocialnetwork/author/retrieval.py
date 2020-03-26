@@ -65,8 +65,23 @@ def get_visible_posts(author_id):
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        author['url'] = settings.FORMATTED_HOST_NAME + \
-                            'author/' + authorID
+
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
+                        try:
+                            uuid.UUID(authorID)
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
+                            else:
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
                         # Check if we already have that author in our db
                         # already. If so, update it.
                         if (len(Author.objects.filter(id=author['id'])) == 1):

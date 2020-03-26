@@ -68,43 +68,7 @@ def update_friends_list(author_id):
                     if len(Author.objects.filter(id=friend_id)) != 1:
                         # We must add them first
                         stored = False
-                        try:
-                            # We have to get them from the other server
-                            friend_uuid = friend_id.split('author/')[1]
-                            node = Node.objects.get(hostname=friend_host)
-                            url = node.api_url + 'author/' + friend_uuid
-                            response = requests.get(url, auth=(
-                                node.node_auth_username, node.node_auth_password), headers={
-                                'content-type': 'appliation/json', 'Accept': 'application/json'})
-                            if response.status_code == 200:
-                                print(response.json())
-                                if "author" in response.json().keys():
-                                    # One minor modification to the displayName:
-                                    author_data = sanitize_author(
-                                        response.json()["author"])
-                                    author_data['displayName'] = author_data['displayName'] + \
-                                        " (" + node.server_username + ")"
-                                    author_parts = author_data['id'].split('/')
-                                    authorID = author_parts[-1]
-                                    if authorID == '':
-                                        authorID = author_parts[-2]
-                                    author_data['url'] = settings.FORMATTED_HOST_NAME + \
-                                        'author/' + authorID
-                                    try:
-                                        author_serializer = AuthorSerializer(
-                                            data=author_data)
-                                        if author_serializer.is_valid():
-                                            author_serializer.save()
-                                            print("We did it")
-                                            stored = True
-                                        else:
-                                            print(author_serializer.errors)
-                                    except Exception as e:
-                                        print("Could not add author", e)
-                            else:
-                                print("failure")
-                        except Exception as e:
-                            print(e)
+                        get_detailed_author(author_id=friend_id)
                     if stored:
                         # We aren't updating them, just adding reference to how they are friends
                         friend = Author.objects.get(id=friend_id)
