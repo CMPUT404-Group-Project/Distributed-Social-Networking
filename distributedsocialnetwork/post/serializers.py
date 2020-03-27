@@ -24,14 +24,14 @@ class CommentSerializer(serializers.ModelSerializer):
         self.fields['author'] = AuthorSerializer(read_only=True)
         return super(CommentSerializer, self).to_representation(instance)
 
-    def validate(self, data):
-        # We will perform a few checks, and then call the super to do the rest
-        # Is the Post ID correct?
-        post_id = self.context["pk"]
-        if post_id != data["post_id"].id:
-            raise serializers.ValidationError(
-                "You cannot post a comment to a different post. ID given was " + str(data["post_id"].id) + ' and URI was for '+str(post_id))
-        return super(CommentSerializer, self).validate(data)
+    # def validate(self, data):
+    #     # We will perform a few checks, and then call the super to do the rest
+    #     # Is the Post ID correct?
+    #     # post_id = self.context["pk"]
+    #     # if post_id != data["post_id"].id:
+    #     #     raise serializers.ValidationError(
+    #     #         "You cannot post a comment to a different post. ID given was " + str(data["post_id"].id) + ' and URI was for '+str(post_id))
+    #     return super(CommentSerializer, self).validate(data)
 
 
 class PostSerializer(serializers.ModelSerializer):
