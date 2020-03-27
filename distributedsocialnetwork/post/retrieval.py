@@ -6,7 +6,7 @@ import requests
 import datetime
 import uuid
 from django.conf import settings
-from .models import Post
+from .models import Post, Comment
 from django.shortcuts import get_object_or_404
 from author.models import Author
 
@@ -178,60 +178,21 @@ def get_detailed_post(post_id):
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
 def get_comments(pk):
-    #return Comment.objects.filter(post_id=post_id)
-    comments = Comment.objects.filter(post_id=pk)
-    comm_ids = []
-    for comment in comments:
-        comm_ids.append(comment["id"])
-    nodes = list(Node.objects.all())
-    for node in nodes:
-        if node.node_auth_username != "":
-            # We can authenticate
-            url = node.api_url + 'posts/' + pk
-            print("sending to ", url)
-            # Include a header containing the Author's id, other nodes may not conform to this.
-            response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
-            if response.status_code == 200:
-                #If they have it, check the comments for any uncached comments
-                posts_json = response.json()
-                for post in posts_json["posts"]:
-                    post = sanitize_post(post)
-                    for comment in post.comments:
-                        # Add comment to list of comments to return if it is not already there
-                        if comment["id"] not in comm_ids:
-                            comments.append(comment)
-                            author = sanitize_author(comment["author"])
-                            # Update author info in the db for the comment
-                            try:
-                                if (len(Author.objects.filter(id=author['id'])) == 1):
-                                    old_author = Author.objects.get(id=author['id'])
-                                    author_serializer = AuthorSerializer(
-                                        old_author, data=author)
-                                else:
-                                    author_serializer = AuthorSerializer(data=author)
-                                if author_serializer.is_valid():
-                                    try:
-                                        author_serializer.save()
-                                    except Exception as e:
-                                        print("Error saving author", 
-                                            author_serializer.validated_data["displayName"], str(e))
-                                else:
-                                    print("Error encountered:", author_serializer.errors)
-                                comment_serializer = CommentSerializer(data=comment)
-                                if comment_serializer.is_valid():
-                                    try:
-                                        comment_serializer.save()
-                                    except Exception as e:
-                                        print("Error saving comment", 
-                                            comment_serializer.validated_data["id"], str(e))
-                                else:
-                                    print("Error encountered:", comment_serializer.errors)
-                            except Exception as e:
-                                print("Error serializing author & comment:", comment["id"], str(e)) 
-    # Return comments with the newly appended comments
-    return comments
-
+    local_comments = Comment.objects.filter(post_id=pk)
+    local_copy = get_object_or_404(Post, id=pk)
+    if(local_copy.origin != local_copy.source):
+        local_split = local_copy.origin.split('/')
+        node = Node.objects.get(hostname__contains=local_split[2])
+        url = node.api_url + 'posts/' + local_split[-1] + '/comments'
+        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), 
+                headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            comments_json = response.json()
+            return comments_json["comments"]
+        else:
+            print("Error GETting:", url)
+    else:
+        return local_comments
 
 def transformSource(post_obj):
     del post_obj["source"]
