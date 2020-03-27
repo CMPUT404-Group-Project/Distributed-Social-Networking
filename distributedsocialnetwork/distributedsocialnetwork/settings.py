@@ -43,7 +43,7 @@ INSTALLED_APPS = [
 
     # Custom Apps
     'author',
-    'distributedsocialnetwork',
+    'distributedsocialnetwork.apps.MainappConfig',
     'post',
     'api',
     'rest_framework',

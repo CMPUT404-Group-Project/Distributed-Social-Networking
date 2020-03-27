@@ -33,3 +33,4 @@ webencodings==0.5.1
 whitenoise==5.0.1
 wrapt==1.11.2
 requests==2.23.0
+schedule==0.6.0

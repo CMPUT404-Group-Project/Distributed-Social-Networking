@@ -56,14 +56,18 @@ def follow_author(request):
         current_user = request.user
         to_follow_id = request.POST["authorId"]
         to_follow = Author.objects.filter(id=to_follow_id)[0]
-        response = send_friend_request(current_user.id, to_follow_id)
-        if response.status_code == 200:
-            # Successful, we are good to go
+        if to_follow.host == settings.FORMATTED_HOST_NAME:
             FollowerManager.add_follower("", current_user, to_follow)
             return redirect(show_friends)
         else:
-            print(response.status_code)
-            return redirect(show_friends)
+            response = send_friend_request(current_user.id, to_follow_id)
+            if response.status_code == 200:
+                # Successful, we are good to go
+                FollowerManager.add_follower("", current_user, to_follow)
+                return redirect(show_friends)
+            else:
+                print(response.status_code)
+                return redirect(show_friends)
 
     return redirect(show_friends)
 

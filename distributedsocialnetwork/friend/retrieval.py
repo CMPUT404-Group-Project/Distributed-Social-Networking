@@ -43,8 +43,6 @@ def send_friend_request(author_id, friend_id):
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
     except:
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    if response.status_code != 200:
         # Let us try again for the response, with a backslash
         try:
             url = url + '/'
