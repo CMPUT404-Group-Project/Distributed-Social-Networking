@@ -13,6 +13,10 @@ def get_all_public_posts():
     get_public_posts()
 
 
+def print_foo():
+    print("FOOOOOOOOO")
+
+
 def run_continuously(self, interval=1):
     """Continuously run, while executing pending jobs at each elapsed
     time interval.
@@ -46,5 +50,6 @@ Scheduler.run_continuously = run_continuously
 
 def start_scheduler():
     scheduler = Scheduler()
-    scheduler.every(30).seconds.do(get_public_posts)
+    # scheduler.every(30).seconds.do(get_public_posts)
+    scheduler.every().second.do(print_foo)
     scheduler.run_continuously()
