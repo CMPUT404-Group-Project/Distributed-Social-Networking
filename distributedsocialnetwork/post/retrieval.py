@@ -1,6 +1,6 @@
 import requests
 from node.models import Node
-from post.serializers import PostSerializer
+from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 import requests
 import datetime
@@ -48,6 +48,7 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        CommentSerializer
         if type(obj["id"]) == type(1):
             # We have to give it a unique UUID.
             # We will give it one, but only if we have not seen it before
@@ -76,6 +77,13 @@ def sanitize_post(obj):
     obj["categories"] = ','.join(obj["visibleTo"])
 
     return obj
+
+
+def transformSource(post_obj):
+    del post_obj["source"]
+    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
+        'posts/' + post_obj['id']
+    return post_obj
 
 
 def get_public_posts():
@@ -222,8 +230,36 @@ def get_detailed_post(post_id):
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
 
-def transformSource(post_obj):
-    del post_obj["source"]
-    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
-        'posts/' + post_obj['id']
-    return post_obj
+def post_foreign_comment(new_comment):
+    # Save post object
+    post = new_comment.post_id
+
+    # get author data
+    author = Author.objects.get(id=new_comment.author_id)
+    author_serializer = AuthorSerializer(author)
+    author_data = dict(author_serializer.data)
+
+    # Serialize and clean
+    comment_serializer = CommentSerializer(new_comment)
+    comment_data = dict(comment_serializer.data)
+    del comment_data["post_id"]
+    comment_data["author"] = author_data
+
+    # build query
+    query = {
+        "query": "addComment",
+        "post": post.origin,
+        "comment": comment_data
+    }
+
+    # send POST request
+    node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
+    url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
+    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                             'content-type': 'application/json', 'Accept': 'application/json'})
+    if response.status_code != 200:
+        # Let us try again for the response, with a backslash
+        url = url + '/'
+        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
+    return response
