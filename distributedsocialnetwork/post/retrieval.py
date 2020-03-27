@@ -1,12 +1,12 @@
 import requests
 from node.models import Node
-from post.serializers import PostSerializer
+from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
 import requests
 import datetime
 import uuid
 from django.conf import settings
-from .models import Post
+from .models import Post, Comment
 from django.shortcuts import get_object_or_404
 from author.models import Author
 
@@ -48,6 +48,7 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        CommentSerializer
         if type(obj["id"]) == type(1):
             # We have to give it a unique UUID.
             # We will give it one, but only if we have not seen it before
@@ -76,6 +77,13 @@ def sanitize_post(obj):
     obj["categories"] = ','.join(obj["visibleTo"])
 
     return obj
+
+
+def transformSource(post_obj):
+    del post_obj["source"]
+    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
+        'posts/' + post_obj['id']
+    return post_obj
 
 
 def get_public_posts():
@@ -225,8 +233,77 @@ def get_detailed_post(post_id):
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
 
-def transformSource(post_obj):
-    del post_obj["source"]
-    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
-        'posts/' + post_obj['id']
-    return post_obj
+def get_comments(pk):
+    local_comments = Comment.objects.filter(post_id=pk)
+    comm_ids = []
+    for comment in local_comments:
+        comm_ids.append(comment.id)
+    local_copy = get_object_or_404(Post, id=pk)
+    if(local_copy.origin != local_copy.source):
+        local_split = local_copy.origin.split('/')
+        node = Node.objects.get(hostname__contains=local_split[2])
+        url = node.api_url + 'posts/' + local_split[-1] + '/comments'
+        print(url)
+        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
+                                headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            comments_json = response.json()
+            for comment in comments_json["comments"]:
+                comment["author"] = comment["author"]["id"]
+                comment["post_id"] = pk
+                print(comment)
+                try:
+                    if comment["id"] in comm_ids:
+                        comment_serializer = CommentSerializer(
+                            Comment.objects.get(comment_id=comment["id"]), data=comment)
+                        if comment_serializer.is_valid():
+                            comment_serializer.save()
+                    else:
+                        comment_serializer = CommentSerializer(data=comment)
+                        try:
+                            if comment_serializer.is_valid(raise_exception=True):
+                                comment_serializer.save()
+                            else:
+                                print(comment_serializer.errors)
+                        except Exception as e:
+                            print(e)
+                except Exception as e:
+                    print("Error serializing comment:", comment["id"], str(e))
+        else:
+            print("Error GETting:", url)
+    return Comment.objects.filter(post_id=pk)
+
+
+def post_foreign_comment(new_comment):
+    # Save post object
+    post = new_comment.post_id
+
+    # get author data
+    author = Author.objects.get(id=new_comment.author_id)
+    author_serializer = AuthorSerializer(author)
+    author_data = dict(author_serializer.data)
+
+    # Serialize and clean
+    comment_serializer = CommentSerializer(new_comment)
+    comment_data = dict(comment_serializer.data)
+    del comment_data["post_id"]
+    comment_data["author"] = author_data
+
+    # build query
+    query = {
+        "query": "addComment",
+        "post": post.origin,
+        "comment": comment_data
+    }
+
+    # send POST request
+    node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
+    url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
+    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                             'content-type': 'application/json', 'Accept': 'application/json'})
+    if response.status_code != 201:
+        # Let us try again for the response, with a backslash
+        url = url + '/'
+        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
+    return response
