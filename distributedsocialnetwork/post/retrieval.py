@@ -24,14 +24,16 @@ def sanitize_author(obj):
         del obj["display_name"]
     if "id" in obj.keys():
         if obj["id"][:4] != "http":
-            obj["id"] = 'http://' + obj['id']
+            obj["id"] = 'https://' + obj['id']
     if "host" in obj.keys():
         if obj["host"][:4] != 'http':
-            obj["host"] = 'http://' + obj["host"]
+            obj["host"] = 'https://' + obj["host"]
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
-            obj["url"] = 'http://' + obj["url"]
-
+            obj["url"] = 'https://' + obj["url"]
+    if "github" in obj.keys():
+        if obj["github"] is None:
+            obj["github"] = ""
     return obj
 
 
@@ -46,12 +48,42 @@ def sanitize_post(obj):
             obj["contentType"] = "text/plain"
 
     if "id" in obj.keys():
+        CommentSerializer
+        if type(obj["id"]) == type(1):
+            # We have to give it a unique UUID.
+            # We will give it one, but only if we have not seen it before
+            if len(Post.objects.filter(origin=obj["origin"])) == 0:
+                obj["id"] = str(uuid.uuid4().hex)
+            else:
+                obj["id"] = str(Post.objects.get(origin=obj["origin"]).id)
+        # We have to convert to a uuid
         obj["id"] = str(uuid.UUID(obj["id"]))
 
+    if "description" in obj.keys():
+        if obj["description"] is None:
+            obj["description"] = ""
+
+    if "visibleTo" in obj.keys():
+        if obj["visibleTo"] is None:
+            obj["visibleTo"] = []
+
+    if "published" in obj.keys():
+        try:
+            obj["published"] = datetime.datetime.strptime(
+                obj["published"], "%Y-%m-%d").strftime('%Y-%m-%dT%H:%M:%S%z')
+        except:
+            pass
     obj["visibleTo"] = ','.join(obj["visibleTo"])
     obj["categories"] = ','.join(obj["visibleTo"])
 
     return obj
+
+
+def transformSource(post_obj):
+    del post_obj["source"]
+    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
+        'posts/' + post_obj['id']
+    return post_obj
 
 
 def get_public_posts():
@@ -77,7 +109,9 @@ def get_public_posts():
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
                     # We should not have these posts in our database if they are from a site we have no connection to.
-                    if len(Node.objects.filter(hostname=post['origin'].split('posts/')[0])) == 1:
+                    hostname = post['origin'].split('posts/')[0]
+                    if len(Node.objects.filter(hostname=hostname)) == 1:
+
                         author = sanitize_author(post["author"])
                         post = sanitize_post(post)
                         post = transformSource(post)
@@ -87,9 +121,22 @@ def get_public_posts():
                         authorID = author_parts[-1]
                         if authorID == '':
                             authorID = author_parts[-2]
-                        author['url'] = settings.FORMATTED_HOST_NAME + \
-                            'author/' + authorID
-
+                        # Our author URLS need a UUID, so we have to check if it's not
+                        # The author's ID should never change!
+                        try:
+                            uuid.UUID(authorID)
+                            author['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + authorID
+                        except:
+                            # We need to create a new one for the URL
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                # We already made one for them
+                                author['url'] = Author.objects.get(
+                                    id=author["id"]).url
+                            else:
+                                # Give them a new one.
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + str(uuid.uuid4().hex)
                         if (len(Author.objects.filter(id=author['id'])) == 1):
                             old_author = Author.objects.get(id=author['id'])
                             author_serializer = AuthorSerializer(
@@ -99,11 +146,12 @@ def get_public_posts():
                         if author_serializer.is_valid():
                             try:
                                 author_serializer.save()
-                                print("saved author")
+                                print("saved author",
+                                      author_serializer.validated_data["displayName"])
                                 # We now have the author saved, so we can move on to the posts
-                                if len(Post.objects.filter(id=post["id"])) == 1:
+                                if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
-                                        Post.objects.get(id=post["id"]), data=post)
+                                        Post.objects.get(origin=post["origin"]), data=post)
                                 else:
                                     post_serializer = PostSerializer(data=post)
                                 if post_serializer.is_valid():
@@ -147,9 +195,16 @@ def get_detailed_post(post_id):
         if 'posts' not in post_json.keys():
             if "post" in post_json.keys():
                 post_json["posts"] = post_json["post"]
+            else:
+                # We don't have them in a wrapper, we should put them in one for compatibility
+                posts = [{}]
+                for attribute in post_json.keys():
+                    posts[0][attribute] = post_json[attribute]
+                post_json["posts"] = posts
         post_data = post_json['posts'][0]
-        post_data = transformSource(post_data)
         post = sanitize_post(post_data)
+        post_data = transformSource(post_data)
+
         post_serializer = PostSerializer(local_copy, data=post)
         if post_serializer.is_valid():
             print("it is valid")
@@ -208,8 +263,36 @@ def get_comments(pk):
             print("Error GETting:", url)
     return Comment.objects.filter(post_id=pk)
 
-def transformSource(post_obj):
-    del post_obj["source"]
-    post_obj["source"] = settings.FORMATTED_HOST_NAME + \
-        'posts/' + post_obj['id']
-    return post_obj
+def post_foreign_comment(new_comment):
+    # Save post object
+    post = new_comment.post_id
+
+    # get author data
+    author = Author.objects.get(id=new_comment.author_id)
+    author_serializer = AuthorSerializer(author)
+    author_data = dict(author_serializer.data)
+
+    # Serialize and clean
+    comment_serializer = CommentSerializer(new_comment)
+    comment_data = dict(comment_serializer.data)
+    del comment_data["post_id"]
+    comment_data["author"] = author_data
+
+    # build query
+    query = {
+        "query": "addComment",
+        "post": post.origin,
+        "comment": comment_data
+    }
+
+    # send POST request
+    node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
+    url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
+    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                             'content-type': 'application/json', 'Accept': 'application/json'})
+    if response.status_code != 201:
+        # Let us try again for the response, with a backslash
+        url = url + '/'
+        response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+            'content-type': 'application/json', 'Accept': 'application/json'})
+    return response

@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
+import uuid
 
 # Create your views here.
 
@@ -396,6 +397,54 @@ class CommentList(APIView):
                 # We insert a comment to this post's comments
                 comment = request.data["comment"]
                 # Our comment model has an author field that is just an ID. So we have to strip that out
+                if len(Node.objects.filter(hostname__contains=comment["author"]["host"])) != 1:
+                    return Response({
+                        "query": "addComment",
+                        "success": False,
+                        "message": "This node is not authorized to post comments on this server."
+                    }, status=status.HTTP_403_FORBIDDEN)
+                elif (len(Author.objects.filter(id=comment["author"]["id"])) == 0):
+                    # Node is authorized but author does not exit yet
+
+                    # Change the displayName
+                    node = list(Node.objects.filter(
+                        hostname__contains=comment["author"]["host"]))[0]
+                    comment["author"]['displayName'] = comment["author"]['displayName'] + \
+                        " (" + node.server_username + ")"
+
+                    # Change URL
+                    author_parts = comment["author"]['id'].split('/')
+                    authorID = author_parts[-1]
+                    if authorID == '':
+                        authorID = author_parts[-2]
+                    # Our author URLS need a UUID, so we have to check if it's not
+                    # The author's ID should never change!
+                    try:
+                        uuid.UUID(authorID)
+                        comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                            'author/' + authorID
+                    except:
+                        # We need to create a new one for the URL
+                        if len(Author.objects.filter(id=comment["author"]["id"])) == 1:
+                            # We already made one for them
+                            comment["author"]['url'] = Author.objects.get(
+                                id=comment["author"]["id"]).url
+                        else:
+                            # Give them a new one.
+                            comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + str(uuid.uuid4().hex)
+
+                    # Serialize and save
+                    author_serializer = AuthorSerializer(
+                        data=comment["author"])
+                    if (author_serializer.is_valid()):
+                        try:
+                            print('author saved')
+                            author_serializer.save()
+                        except Exception as e:
+                            print(e)
+                    else:
+                        print(author_serializer.errors)
                 comment["author"] = comment["author"]["id"]
                 # We use the pk in the url for the post_id.
                 comment["post_id"] = pk
@@ -487,7 +536,7 @@ class AuthUserPosts(APIView):
         else:
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(
-                visibility="PUBLIC", origin__contains=hostname)
+                visibility="PUBLIC", origin__contains=settings.FORMATTED_HOST_NAME)
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -679,8 +728,22 @@ class FriendRequest(APIView):
                             authorID = author_parts[-1]
                             if authorID == '':
                                 authorID = author_parts[-2]
-                            author['url'] = settings.FORMATTED_HOST_NAME + \
-                                'author/' + authorID
+                            # Our author URLS need a UUID, so we have to check if it's not
+                            # The author's ID should never change!
+                            try:
+                                uuid.UUID(authorID)
+                                author['url'] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + authorID
+                            except:
+                                # We need to create a new one for the URL
+                                if len(Author.objects.filter(id=author["id"])) == 1:
+                                    # We already made one for them
+                                    author['url'] = Author.objects.get(
+                                        id=author["id"]).url
+                                else:
+                                    # Give them a new one.
+                                    author['url'] = settings.FORMATTED_HOST_NAME + \
+                                        'author/' + str(uuid.uuid4().hex)
                             # We try serializing and saving the author
                             author_serializer = AuthorSerializer(
                                 data=author)
@@ -712,7 +775,6 @@ class FriendRequest(APIView):
                     # Author already exists in our system.
                     # If the user is an author, we can send the friend request if they are the one sending it
                     # If the user is a node, we send the friend request if they have the same host as the one sending it
-                    print(request.data["author"]["host"])
                     if request.user.is_node:
                         if request.data["author"]["host"] != request.user.host:
                             # We send a 401. They can't send requests on behalf of users from other hosts.
@@ -783,9 +845,8 @@ class Authors(APIView):
                 "success": False,
                 "message": "Authentication is required for this endpoint."
             }, status=status.HTTP_401_UNAUTHORIZED)
-
-
-        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+        authors = Author.objects.filter(
+            is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
         serializer = AuthorSerializer(authors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
