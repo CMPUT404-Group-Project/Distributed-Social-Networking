@@ -179,6 +179,9 @@ def get_detailed_post(post_id):
 
 def get_comments(pk):
     local_comments = Comment.objects.filter(post_id=pk)
+    comm_ids = []
+    for comment in local_comments:
+        comm_ids.append(comment.id)
     local_copy = get_object_or_404(Post, id=pk)
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
@@ -188,11 +191,22 @@ def get_comments(pk):
                 headers={'content-type': 'application/json', 'Accept': 'application/json'})
         if response.status_code == 200:
             comments_json = response.json()
-            return comments_json["comments"]
+            for comment in comments_json["comments"]:
+                try:
+                    if comment.id in comm_ids:
+                        comment_serializer = CommentSerializer(
+                            Comment.objects.filter(comment_id=comment["id"]), comment)
+                        if comment_serializer.is_valid():
+                            comment_serializer.save()
+                    else:
+                        comment_serializer = CommentSerializer(comment)
+                        if comment_serializer.is_valid():
+                            comment_serializer.save()
+                except Exception as e:
+                    print("Error serializing comment:", comment["id"], str(e))
         else:
             print("Error GETting:", url)
-    else:
-        return local_comments
+    return Comment.objects.filter(post_id=pk)
 
 def transformSource(post_obj):
     del post_obj["source"]
