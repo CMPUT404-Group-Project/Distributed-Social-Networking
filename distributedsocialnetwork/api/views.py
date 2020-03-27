@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
 import uuid
-
+import requests
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -186,7 +186,31 @@ class PostDetailView(APIView):
                                 has_allowed_user = True
                         if author.id in post.visibleTo and post.visibility == "PRIVATE":
                             has_allowed_user = True
-                        # TODO: FOAF
+                        if post.visibility == "FOAF" and not Friend.objects.are_friends(author, get_object_or_404(Author, id=post.author.id)):
+                            # If this author is friends with a friend of the post author, we can send it.
+                            # We get their friends from the server
+                            try:
+                                node = Node.objects.get(
+                                    server_username=request.user.displayName)
+                                url = node.api_url + 'author/' + \
+                                    author.id.split('author/')[-1] + '/friends'
+                                response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                if response.status_code == 200:
+                                    response_data = response.json()
+                                    for friend_id in response_data["authors"]:
+                                        # If they are friends with our author, they should be stored locally
+                                        if len(Author.objects.filter(id=friend_id)) == 1:
+                                            friend = Author.objects.get(
+                                                id=friend_id)
+                                            if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
+                                                # They are FOAF. So we can send it.
+                                                has_allowed_user = True
+
+                            except Exception:
+                                # We can't reach the other server, so we can't in good conscience send this post.
+                                pass
+
                     if not has_allowed_user:
                         # They are not authenticated to see this post. We send a 401.
                         response = {
@@ -246,56 +270,155 @@ class PostDetailView(APIView):
         # This is used for two different purposes:
         # 1) Adding a new post
         # 2) Requesting a post for FOAF purposes
-        # The latter involves the friends system, which is not implemented.
         # The documentation does not specify what the POSTing a Post is supposed to look like.
         # So I assume it is similar to posting a comment.
         if 'application/json' in request.headers["Content-Type"]:
             if request.data["query"] == "getPost":
                 # FOAF stuff to be added here (once we have friends)
-                pass
-            try:
-                post = request.data["post"]
-                # Authors can only create posts as themselves
-                if request.user.is_authenticated and request.user.id == post["author"]["id"]:
-                    # Author gets collapsed to author's id
-                    post["author"] = post["author"]["id"]
-                    post["id"] = pk
-                    post["categories"] = ','.join(post["categories"])
-                    post["visibleTo"] = ','.join(post["visibleTo"])
-                    serializer = PostSerializer(
-                        data=post, context={"request": request})
-                    if serializer.is_valid():
-                        try:
-                            serializer.create(serializer.validated_data)
-                            return Response({
-                                "query": "addPost",
-                                "success": True,
-                                "message": "Post Added"
-                            }, status=status.HTTP_201_CREATED)
-                        except:
-                            # Failed to create, because that post id is already in use.
-                            # Posts can be updated, but they should be using PUT for this.
-                            return Response({
-                                "query": "addPost",
+                # A server will send us this to determine whether or not an author can see a Post
+                # We check the friends they supply, querying other servers if necessary.
+                # If they are indeed friends, and the post is marked as FOAF/public, then we can send it
+                # First off, do we even have the post?
+                post = get_object_or_404(Post, id=request.data["postid"])
+                try:
+                    # Now, is this person friends with everyone he says he is?
+                    author_id = request.data["author"]["id"]
+                    # strip off the http at the front
+                    author_id = author_id.split('://')[1]
+                    foaf_verified = False
+                    # For each friend in the list, if we are connected, we send off a request to see if they are friends
+                    for friend_id in request.data["friends"]:
+                        if len(Author.objects.filter(id=friend_id)) == 1:
+                            # This author is stored in our server!
+                            friend = Author.objects.get(id=friend_id)
+                            if friend.host == settings.FORMATTED_HOST_NAME:
+                                # Friend is a user from this server. We are the absolute authority. If they are friends, we know.
+                                # Which means, they must be an author in our server
+                                author = Author.objects.get(id=post.author.id)
+                                if Friend.objects.are_friends(author, friend):
+                                    foaf_verified = True
+                        if len(Node.objects.filter(hostname=friend_id.split('author')[0])) == 1:
+                            # We query them
+                            node = Node.objects.get(
+                                hostname=friend_id.split('author')[0])
+                            url = node.api_url + \
+                                friend_id.split(
+                                    'author/')[-1] + '/friends/' + author_id
+                            try:
+                                response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                if response.status_code == 200:
+                                    response_data = response.json()
+                                    if response_data["friends"]:
+                                        foaf_verified = True
+                            except Exception as e:
+                                # We could not reach the server, or the post was not proper JSON.
+                                # We should still check the other ones
+                                continue
+                    if foaf_verified:
+                        # They are verified to see the Post, if it is set to FOAF visibility. We return the post.
+                        # But we have to check some stuff first.
+                        can_send = False
+                        if post.visibility in ["PUBLIC", "FOAF"]:
+                            can_send = True
+                        else:
+                            # Despite the fact that they authenticated as FOAF, we can't return it if it's not that visibility.
+                            if post.visibility == "PRIVATE":
+                                if author_id in post.visibleTo:
+                                    # We can return the post
+                                    can_send = True
+                            if post.visibility == "FRIENDS":
+                                # This implies that the author of the post must be friends with the author in the query
+                                if len(Author.objects.filter(id=author_id)) == 1:
+                                    if Friend.objects.are_friends(Author.objects.get(id=author_id), Author.objects.get(id=post.author.id)):
+                                        can_send = True
+                            if post.visibility == "SERVERONLY":
+                                # If they are a user from our server, then yes
+                                if author_id.split('author')[0] == settings.FORMATTED_HOST_NAME:
+                                    can_send = True
+                        if can_send:
+                            response = {"query": "posts"}
+                            post_query_set = Post.objects.filter(id=pk)
+                            post_list_dict = post_list_generator(
+                                request, post_query_set)
+                            # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
+                            response["count"] = post_list_dict["count"]
+                            response["size"] = post_list_dict["page_size"]
+                            if post_list_dict["next"]:
+                                response["next"] = post_list_dict["next"]
+                            if post_list_dict["previous"]:
+                                response["previous"] = post_list_dict["previous"]
+                            # We add nested comment lists for all posts
+                            for post in post_list_dict["posts"]:
+                                comment_query_set = Comment.objects.filter(
+                                    post_id=post["id"])
+                                comment_list_dict = nested_comment_list_generator(
+                                    request, comment_query_set, post["id"])
+                                post["count"] = comment_list_dict["count"]
+                                post["next"] = comment_list_dict["next"]
+                                post["comments"] = comment_list_dict["comments"]
+                            response["posts"] = post_list_dict["posts"]
+                            return Response(response, status=status.HTTP_200_OK)
+                        else:
+                            response = {
+                                "query": "posts",
                                 "success": False,
-                                "message": "Post ID already exists."
-                            }, status=status.HTTP_403_FORBIDDEN)
+                                "message": "You are not authenticated to see this post."
+                            }
+                            return Response(response, status=status.HTTP_403_FORBIDDEN)
+                except Exception:
+                    # Something failed here
+                    response = {
+                        "query": "posts",
+                        "success": False,
+                        "message": "Post could not be retrieved. Failure in verifying FOAF."
+                    }
+                    return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # They are inserting a post
+                try:
+                    post = request.data["post"]
+                    # Authors can only create posts as themselves
+                    if request.user.is_authenticated and request.user.id == post["author"]["id"]:
+                        # Author gets collapsed to author's id
+                        post["author"] = post["author"]["id"]
+                        post["id"] = pk
+                        post["categories"] = ','.join(post["categories"])
+                        post["visibleTo"] = ','.join(post["visibleTo"])
+                        serializer = PostSerializer(
+                            data=post, context={"request": request})
+                        if serializer.is_valid():
+                            try:
+                                serializer.create(serializer.validated_data)
+                                return Response({
+                                    "query": "addPost",
+                                    "success": True,
+                                    "message": "Post Added"
+                                }, status=status.HTTP_201_CREATED)
+                            except:
+                                # Failed to create, because that post id is already in use.
+                                # Posts can be updated, but they should be using PUT for this.
+                                return Response({
+                                    "query": "addPost",
+                                    "success": False,
+                                    "message": "Post ID already exists."
+                                }, status=status.HTTP_403_FORBIDDEN)
+                        return Response({
+                            "query": "addPost",
+                            "success": False,
+                            "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                     return Response({
                         "query": "addPost",
                         "success": False,
-                        "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-                return Response({
-                    "query": "addPost",
-                    "success": False,
-                    "message": "Not Authorized."
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            except Exception as e:
-                # We can't parse the body
-                return Response({
-                    "query": "addPost",
-                    "success": False,
-                    "message": "Body is incorrectly formatted. " + str(e)
-                }, status=status.HTTP_400_BAD_REQUEST)
+                        "message": "Not Authorized."
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+                except Exception as e:
+                    # We can't parse the body
+                    return Response({
+                        "query": "addPost",
+                        "success": False,
+                        "message": "Body is incorrectly formatted. " + str(e)
+                    }, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             "query": "addPost",
             "success": False,
@@ -496,7 +619,6 @@ class AuthUserPosts(APIView):
 
     def get(self, request):
         # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
-        response = {'query': "posts"}
         if request.user.is_authenticated:
             # We now have two different options in regards to who is authenticated.
             # 1. A user from our server
@@ -531,12 +653,44 @@ class AuthUserPosts(APIView):
                         visibility="PRIVATE", visibleTo__icontains=author.id, origin__contains=hostname)
                     friend_posts = friend_posts | Post.objects.filter(
                         visibility="FRIENDS", author__in=Friend.objects.get_friends(author), origin__contains=hostname)
-                    # TODO: FOAF
+                    # Foaf is trickier.
+                    for post in Post.objects.filter(visibility="FOAF"):
+                        # If the author is friends with the author of the post, we can send it.
+                        # If the author is friends with a friend of the author of the post, we can send it.
+                        if Friend.objects.are_friends(post.author, author):
+                            foaf_posts = foaf_posts | Post.objects.filter(
+                                id=post.id)
+                        else:
+                            # We have to query the server to see who their friends are.
+                            try:
+                                node = Node.objects.get(
+                                    server_username=request.user.displayName)
+                                url = node.api_url + 'author/' + \
+                                    author.id.split('author/')[-1] + '/friends'
+                                response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                if response.status_code == 200:
+                                    response_data = response.json()
+                                    for friend_id in response_data["authors"]:
+                                        # If they are friends with our author, they should be stored locally
+                                        if len(Author.objects.filter(id=friend_id)) == 1:
+                                            friend = Author.objects.get(
+                                                id=friend_id)
+                                            if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
+                                                # They are FOAF. So we can send it.
+                                                foaf_posts = foaf_posts | Post.objects.filter(
+                                                    id=post.id)
+
+                            except Exception:
+                                # We can't reach the other server, so we can't in good conscience send this post.
+                                pass
+
                 post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(
                 visibility="PUBLIC", origin__contains=settings.FORMATTED_HOST_NAME)
+        response = {'query': "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -565,7 +719,6 @@ class AuthorPosts(APIView):
         # The URL contains a fragment of the specified author's id. We have to retrieve the actual author.
         author = get_object_or_404(Author, id__icontains=pk)
         author_id = author.id
-        response = {"query": "posts"}
         if request.user.is_authenticated:
             # We now have two different options in regards to who is authenticated.
             # 1. A user from our server
@@ -611,12 +764,43 @@ class AuthorPosts(APIView):
                             visibility="FRIENDS", author=author_id)
                         foaf_posts = foaf_posts | Post.objects.filter(
                             visibility="FOAF", author=author_id)
-                    # TODO: If they are FOAF.
+                    # Foaf is trickier.
+                    for post in Post.objects.filter(visibility="FOAF", author=author_id):
+                        # If the author is friends with the author of the post, we can send it.
+                        # If the author is friends with a friend of the author of the post, we can send it.
+                        if Friend.objects.are_friends(post.author, author):
+                            foaf_posts = foaf_posts | Post.objects.filter(
+                                id=post.id)
+                        else:
+                            # We have to query the server to see who their friends are.
+                            try:
+                                node = Node.objects.get(
+                                    server_username=request.user.displayName)
+                                url = node.api_url + 'author/' + \
+                                    author.id.split('author/')[-1] + '/friends'
+                                response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                if response.status_code == 200:
+                                    response_data = response.json()
+                                    for friend_id in response_data["authors"]:
+                                        # If they are friends with our author, they should be stored locally
+                                        if len(Author.objects.filter(id=friend_id)) == 1:
+                                            friend = Author.objects.get(
+                                                id=friend_id)
+                                            if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
+                                                # They are FOAF. So we can send it.
+                                                foaf_posts = foaf_posts | Post.objects.filter(
+                                                    id=post.id)
+
+                            except Exception:
+                                # We can't reach the other server, so we can't in good conscience send this post.
+                                pass
                 post_query_set = author_public_posts | author_private_posts | friend_posts | foaf_posts
 
         else:
             post_query_set = Post.objects.filter(
                 author=author_id, visibility="PUBLIC")
+        response = {"query": "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next, previous, posts]
         response["count"] = post_list_dict["count"]
