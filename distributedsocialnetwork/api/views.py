@@ -397,6 +397,54 @@ class CommentList(APIView):
                 # We insert a comment to this post's comments
                 comment = request.data["comment"]
                 # Our comment model has an author field that is just an ID. So we have to strip that out
+                if len(Node.objects.filter(hostname__contains=comment["author"]["host"])) != 1:
+                    return Response({
+                        "query": "addComment",
+                        "success": False,
+                        "message": "This node is not authorized to post comments on this server."
+                    }, status=status.HTTP_403_FORBIDDEN)
+                elif (len(Author.objects.filter(id=comment["author"]["id"])) == 0):
+                    # Node is authorized but author does not exit yet
+
+                    # Change the displayName
+                    node = list(Node.objects.filter(
+                        hostname__contains=comment["author"]["host"]))[0]
+                    comment["author"]['displayName'] = comment["author"]['displayName'] + \
+                        " (" + node.server_username + ")"
+
+                    # Change URL
+                    author_parts = comment["author"]['id'].split('/')
+                    authorID = author_parts[-1]
+                    if authorID == '':
+                        authorID = author_parts[-2]
+                    # Our author URLS need a UUID, so we have to check if it's not
+                    # The author's ID should never change!
+                    try:
+                        uuid.UUID(authorID)
+                        comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                            'author/' + authorID
+                    except:
+                        # We need to create a new one for the URL
+                        if len(Author.objects.filter(id=comment["author"]["id"])) == 1:
+                            # We already made one for them
+                            comment["author"]['url'] = Author.objects.get(
+                                id=comment["author"]["id"]).url
+                        else:
+                            # Give them a new one.
+                            comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + str(uuid.uuid4().hex)
+
+                    # Serialize and save
+                    author_serializer = AuthorSerializer(
+                        data=comment["author"])
+                    if (author_serializer.is_valid()):
+                        try:
+                            print('author saved')
+                            author_serializer.save()
+                        except Exception as e:
+                            print(e)
+                    else:
+                        print(author_serializer.errors)
                 comment["author"] = comment["author"]["id"]
                 # We use the pk in the url for the post_id.
                 comment["post_id"] = pk
@@ -423,6 +471,7 @@ class CommentList(APIView):
                     "message": serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
             except:
+                print(e)
                 # We can't parse the body
                 return Response({
                     "query": "addComment",
@@ -797,9 +846,8 @@ class Authors(APIView):
                 "success": False,
                 "message": "Authentication is required for this endpoint."
             }, status=status.HTTP_401_UNAUTHORIZED)
-
-
-        authors = Author.objects.filter(is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+        authors = Author.objects.filter(
+            is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
         serializer = AuthorSerializer(authors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
