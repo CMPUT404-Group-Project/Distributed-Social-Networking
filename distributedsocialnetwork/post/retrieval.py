@@ -251,9 +251,9 @@ def get_comments(pk):
                 comment["author"] = comment["author"]["id"]
                 comment["post_id"] = pk
                 try:
-                    if comment["id"] in comm_ids:
+                    if uuid.UUID(comment["id"]) in comm_ids:
                         comment_serializer = CommentSerializer(
-                            Comment.objects.get(comment_id=comment["id"]), data=comment)
+                            Comment.objects.get(id=comment["id"]), data=comment)
                         if comment_serializer.is_valid():
                             comment_serializer.save()
                     else:
