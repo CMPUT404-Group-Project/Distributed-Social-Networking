@@ -279,7 +279,7 @@ class PostDetailView(APIView):
                 # We check the friends they supply, querying other servers if necessary.
                 # If they are indeed friends, and the post is marked as FOAF/public, then we can send it
                 # First off, do we even have the post?
-                post = get_object_or_404(post, id=request.data["postid"])
+                post = get_object_or_404(Post, id=request.data["postid"])
                 try:
                     # Now, is this person friends with everyone he says he is?
                     author_id = request.data["author"]["id"]
@@ -294,7 +294,7 @@ class PostDetailView(APIView):
                             if friend.host == settings.FORMATTED_HOST_NAME:
                                 # Friend is a user from this server. We are the absolute authority. If they are friends, we know.
                                 # Which means, they must be an author in our server
-                                author = get_object_or_404(Author, author_id)
+                                author = Author.objects.get(id=post.author.id)
                                 if Friend.objects.are_friends(author, friend):
                                     foaf_verified = True
                         if len(Node.objects.filter(hostname=friend_id.split('author')[0])) == 1:
@@ -319,7 +319,7 @@ class PostDetailView(APIView):
                         # They are verified to see the Post, if it is set to FOAF visibility. We return the post.
                         # But we have to check some stuff first.
                         can_send = False
-                        if post.visibility in ["PUBLIC, FOAF"]:
+                        if post.visibility in ["PUBLIC", "FOAF"]:
                             can_send = True
                         else:
                             # Despite the fact that they authenticated as FOAF, we can't return it if it's not that visibility.
@@ -619,7 +619,6 @@ class AuthUserPosts(APIView):
 
     def get(self, request):
         # The url is now a fragment of the Author's ID. We need to retrieve the appropriate author object.
-        response = {'query': "posts"}
         if request.user.is_authenticated:
             # We now have two different options in regards to who is authenticated.
             # 1. A user from our server
@@ -659,7 +658,8 @@ class AuthUserPosts(APIView):
                         # If the author is friends with the author of the post, we can send it.
                         # If the author is friends with a friend of the author of the post, we can send it.
                         if Friend.objects.are_friends(post.author, author):
-                            foaf_posts = foaf_posts | post
+                            foaf_posts = foaf_posts | Post.objects.filter(
+                                id=post.id)
                         else:
                             # We have to query the server to see who their friends are.
                             try:
@@ -678,7 +678,8 @@ class AuthUserPosts(APIView):
                                                 id=friend_id)
                                             if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
                                                 # They are FOAF. So we can send it.
-                                                foaf_posts = foaf_posts | post
+                                                foaf_posts = foaf_posts | Post.objects.filter(
+                                                    id=post.id)
 
                             except Exception:
                                 # We can't reach the other server, so we can't in good conscience send this post.
@@ -689,6 +690,7 @@ class AuthUserPosts(APIView):
             # They are not logged in and authenticated. So
             post_query_set = Post.objects.filter(
                 visibility="PUBLIC", origin__contains=settings.FORMATTED_HOST_NAME)
+        response = {'query': "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
         response["count"] = post_list_dict["count"]
@@ -717,7 +719,6 @@ class AuthorPosts(APIView):
         # The URL contains a fragment of the specified author's id. We have to retrieve the actual author.
         author = get_object_or_404(Author, id__icontains=pk)
         author_id = author.id
-        response = {"query": "posts"}
         if request.user.is_authenticated:
             # We now have two different options in regards to who is authenticated.
             # 1. A user from our server
@@ -764,11 +765,12 @@ class AuthorPosts(APIView):
                         foaf_posts = foaf_posts | Post.objects.filter(
                             visibility="FOAF", author=author_id)
                     # Foaf is trickier.
-                    for post in Post.objects.filter(visibility="FOAF"):
+                    for post in Post.objects.filter(visibility="FOAF", author=author_id):
                         # If the author is friends with the author of the post, we can send it.
                         # If the author is friends with a friend of the author of the post, we can send it.
                         if Friend.objects.are_friends(post.author, author):
-                            foaf_posts = foaf_posts | post
+                            foaf_posts = foaf_posts | Post.objects.filter(
+                                id=post.id)
                         else:
                             # We have to query the server to see who their friends are.
                             try:
@@ -787,7 +789,8 @@ class AuthorPosts(APIView):
                                                 id=friend_id)
                                             if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
                                                 # They are FOAF. So we can send it.
-                                                foaf_posts = foaf_posts | post
+                                                foaf_posts = foaf_posts | Post.objects.filter(
+                                                    id=post.id)
 
                             except Exception:
                                 # We can't reach the other server, so we can't in good conscience send this post.
@@ -797,6 +800,7 @@ class AuthorPosts(APIView):
         else:
             post_query_set = Post.objects.filter(
                 author=author_id, visibility="PUBLIC")
+        response = {"query": "posts"}
         post_list_dict = post_list_generator(request, post_query_set)
         # Returns [page_size, page_num, count, next, previous, posts]
         response["count"] = post_list_dict["count"]
