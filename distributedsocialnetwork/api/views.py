@@ -404,11 +404,37 @@ class CommentList(APIView):
                         "message": "This node is not authorized to post comments on this server."
                     }, status=status.HTTP_403_FORBIDDEN)
                 elif (len(Author.objects.filter(id=comment["author"]["id"])) == 0):
-                    # Node is authorized but auther does now exit yet
+                    # Node is authorized but author does not exit yet
+
+                    # Change the displayName
                     node = list(Node.objects.filter(
                         hostname__contains=comment["author"]["host"]))[0]
                     comment["author"]['displayName'] = comment["author"]['displayName'] + \
                         " (" + node.server_username + ")"
+
+                    # Change URL
+                    author_parts = comment["author"]['id'].split('/')
+                    authorID = author_parts[-1]
+                    if authorID == '':
+                        authorID = author_parts[-2]
+                    # Our author URLS need a UUID, so we have to check if it's not
+                    # The author's ID should never change!
+                    try:
+                        uuid.UUID(authorID)
+                        comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                            'author/' + authorID
+                    except:
+                        # We need to create a new one for the URL
+                        if len(Author.objects.filter(id=comment["author"]["id"])) == 1:
+                            # We already made one for them
+                            comment["author"]['url'] = Author.objects.get(
+                                id=comment["author"]["id"]).url
+                        else:
+                            # Give them a new one.
+                            comment["author"]['url'] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + str(uuid.uuid4().hex)
+
+                    # Serialize and save
                     author_serializer = AuthorSerializer(
                         data=comment["author"])
                     if (author_serializer.is_valid()):
