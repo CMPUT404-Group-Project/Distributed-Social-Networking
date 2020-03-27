@@ -49,7 +49,7 @@ def view_post(request, pk):
                 new_comment.post_id = get_object_or_404(Post, id=pk)
                 if (new_comment.post_id.origin != settings.FORMATTED_HOST_NAME):
                     res = post_foreign_comment(new_comment)
-                    if (res.status_code == 200):
+                    if (res.status_code == 201):
                         new_comment.save()
                         return redirect(new_comment.post_id.source)
                     else:
