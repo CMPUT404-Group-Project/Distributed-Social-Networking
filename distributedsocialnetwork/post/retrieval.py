@@ -6,7 +6,7 @@ import requests
 import datetime
 import uuid
 from django.conf import settings
-from .models import Post
+from .models import Post, Comment
 from django.shortcuts import get_object_or_404
 from author.models import Author
 
@@ -231,6 +231,47 @@ def get_detailed_post(post_id):
     # url =
     # response = requests.get(
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
+
+
+def get_comments(pk):
+    local_comments = Comment.objects.filter(post_id=pk)
+    comm_ids = []
+    for comment in local_comments:
+        comm_ids.append(comment.id)
+    local_copy = get_object_or_404(Post, id=pk)
+    if(local_copy.origin != local_copy.source):
+        local_split = local_copy.origin.split('/')
+        node = Node.objects.get(hostname__contains=local_split[2])
+        url = node.api_url + 'posts/' + local_split[-1] + '/comments'
+        print(url)
+        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
+                                headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            comments_json = response.json()
+            for comment in comments_json["comments"]:
+                comment["author"] = comment["author"]["id"]
+                comment["post_id"] = pk
+                print(comment)
+                try:
+                    if comment["id"] in comm_ids:
+                        comment_serializer = CommentSerializer(
+                            Comment.objects.get(comment_id=comment["id"]), data=comment)
+                        if comment_serializer.is_valid():
+                            comment_serializer.save()
+                    else:
+                        comment_serializer = CommentSerializer(data=comment)
+                        try:
+                            if comment_serializer.is_valid(raise_exception=True):
+                                comment_serializer.save()
+                            else:
+                                print(comment_serializer.errors)
+                        except Exception as e:
+                            print(e)
+                except Exception as e:
+                    print("Error serializing comment:", comment["id"], str(e))
+        else:
+            print("Error GETting:", url)
+    return Comment.objects.filter(post_id=pk)
 
 
 def post_foreign_comment(new_comment):
