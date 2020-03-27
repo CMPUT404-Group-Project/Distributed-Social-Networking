@@ -17,18 +17,23 @@ def get_all_public_posts():
 
 
 def get_all_visible_posts():
-    for author in Author.objects.filter(hostname=settings.FORMATTED_HOST_NAME):
-        get_visible_posts(author.id)
+    for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
+        print(get_visible_posts(author.id))
 
 
 def update_all_foreign_authors():
-    for author in Author.objects.all().exclude(hostname=settings.FORMATTED_HOST_NAME):
+    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME):
         get_detailed_author(author.id)
         update_friends_list(author.id)
 
 
-def print_foo():
-    print("FOOOOOOOOO")
+def get_updates():
+    print("Getting Visible Posts\n======")
+    get_all_visible_posts()
+    print("Getting Public Posts\n======")
+    get_all_public_posts()
+    print("Updating Foreign Authors\n======")
+    update_all_foreign_authors()
 
 
 def run_continuously(self, interval=1):
@@ -64,8 +69,5 @@ Scheduler.run_continuously = run_continuously
 
 def start_scheduler():
     scheduler = Scheduler()
-    scheduler.every(30).seconds.do(get_public_posts)
-    # scheduler.every(30).seconds.do(get_all_visible_posts)
-    # scheduler.every(30).seconds.do(update_all_foreign_authors)
-    # scheduler.every().second.do(print_foo)
+    scheduler.every(30).seconds.do(get_updates)
     scheduler.run_continuously()
