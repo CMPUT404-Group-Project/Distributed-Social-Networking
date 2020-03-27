@@ -53,7 +53,8 @@ def view_post(request, pk):
                         new_comment.save()
                         return redirect(new_comment.post_id.source)
                     else:
-                        pass  # Give some error code of some kind
+                        form = PostCommentForm()
+                        form.non_field_errors = "Comment failed to post, please try again."
                 else:
                     new_comment.save()
                     return redirect(new_comment.post_id.source)
