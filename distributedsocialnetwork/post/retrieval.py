@@ -297,11 +297,16 @@ def post_foreign_comment(new_comment):
     # send POST request
     node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
     url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
-    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                             'content-type': 'application/json', 'Accept': 'application/json'})
-    if response.status_code != 201:
-        # Let us try again for the response, with a backslash
-        url = url + '/'
+    try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code != 201:
+            # Let us try again for the response, with a backslash
+            url = url + '/'
+            response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                'content-type': 'application/json', 'Accept': 'application/json'})
+    except Exception as e:
+        print(e)
+        response = None
+
     return response
