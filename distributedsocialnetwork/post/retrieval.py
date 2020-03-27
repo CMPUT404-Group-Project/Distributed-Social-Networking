@@ -243,7 +243,6 @@ def get_comments(pk):
         local_split = local_copy.origin.split('/')
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'posts/' + local_split[-1] + '/comments'
-        print(url)
         response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
                                 headers={'content-type': 'application/json', 'Accept': 'application/json'})
         if response.status_code == 200:
@@ -251,7 +250,6 @@ def get_comments(pk):
             for comment in comments_json["comments"]:
                 comment["author"] = comment["author"]["id"]
                 comment["post_id"] = pk
-                print(comment)
                 try:
                     if comment["id"] in comm_ids:
                         comment_serializer = CommentSerializer(
