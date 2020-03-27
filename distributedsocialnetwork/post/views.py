@@ -7,7 +7,8 @@ from friend.models import Friend
 from author.models import Author
 import datetime
 import uuid
-from .retrieval import get_detailed_post, post_foreign_comment
+from .retrieval import get_detailed_post, post_foreign_comment, get_comments
+
 # Create your views here.
 
 
@@ -49,7 +50,7 @@ def view_post(request, pk):
                 new_comment.post_id = get_object_or_404(Post, id=pk)
                 if (new_comment.post_id.origin != settings.FORMATTED_HOST_NAME):
                     res = post_foreign_comment(new_comment)
-                    if (res.status_code == 200):
+                    if (res.status_code == 201):
                         new_comment.save()
                         return redirect(new_comment.post_id.source)
                     else:
@@ -87,7 +88,7 @@ def view_post(request, pk):
     context['edit_url'] = request.get_full_path() + '/edit'
     context["request"] = request
     context['postCommentForm'] = form
-    context['comments'] = Comment.objects.filter(post_id=pk)
+    context['comments'] = get_comments(pk)#Comment.objects.filter(post_id=pk)
     return render(request, 'detailed_post.html', context)
 
 

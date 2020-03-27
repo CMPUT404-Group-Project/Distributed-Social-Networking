@@ -6,7 +6,7 @@ import requests
 import datetime
 import uuid
 from django.conf import settings
-from .models import Post
+from .models import Post, Comment
 from django.shortcuts import get_object_or_404
 from author.models import Author
 
@@ -24,13 +24,13 @@ def sanitize_author(obj):
         del obj["display_name"]
     if "id" in obj.keys():
         if obj["id"][:4] != "http":
-            obj["id"] = 'http://' + obj['id']
+            obj["id"] = 'https://' + obj['id']
     if "host" in obj.keys():
         if obj["host"][:4] != 'http':
-            obj["host"] = 'http://' + obj["host"]
+            obj["host"] = 'https://' + obj["host"]
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
-            obj["url"] = 'http://' + obj["url"]
+            obj["url"] = 'https://' + obj["url"]
     if "github" in obj.keys():
         if obj["github"] is None:
             obj["github"] = ""
@@ -109,7 +109,9 @@ def get_public_posts():
                 for post in posts_json["posts"]:
                     # We first have to ensure the author of each post is in our database.
                     # We should not have these posts in our database if they are from a site we have no connection to.
-                    if len(Node.objects.filter(hostname=post['origin'].split('posts/')[0])) == 1:
+                    hostname = post['origin'].split('posts/')[0]
+                    if len(Node.objects.filter(hostname=hostname)) == 1:
+
                         author = sanitize_author(post["author"])
                         post = sanitize_post(post)
                         post = transformSource(post)
@@ -144,7 +146,8 @@ def get_public_posts():
                         if author_serializer.is_valid():
                             try:
                                 author_serializer.save()
-                                print("saved author")
+                                print("saved author",
+                                      author_serializer.validated_data["displayName"])
                                 # We now have the author saved, so we can move on to the posts
                                 if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
@@ -230,6 +233,47 @@ def get_detailed_post(post_id):
     #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
 
 
+def get_comments(pk):
+    local_comments = Comment.objects.filter(post_id=pk)
+    comm_ids = []
+    for comment in local_comments:
+        comm_ids.append(comment.id)
+    local_copy = get_object_or_404(Post, id=pk)
+    if(local_copy.origin != local_copy.source):
+        local_split = local_copy.origin.split('/')
+        node = Node.objects.get(hostname__contains=local_split[2])
+        url = node.api_url + 'posts/' + local_split[-1] + '/comments'
+        print(url)
+        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
+                                headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            comments_json = response.json()
+            for comment in comments_json["comments"]:
+                comment["author"] = comment["author"]["id"]
+                comment["post_id"] = pk
+                print(comment)
+                try:
+                    if comment["id"] in comm_ids:
+                        comment_serializer = CommentSerializer(
+                            Comment.objects.get(comment_id=comment["id"]), data=comment)
+                        if comment_serializer.is_valid():
+                            comment_serializer.save()
+                    else:
+                        comment_serializer = CommentSerializer(data=comment)
+                        try:
+                            if comment_serializer.is_valid(raise_exception=True):
+                                comment_serializer.save()
+                            else:
+                                print(comment_serializer.errors)
+                        except Exception as e:
+                            print(e)
+                except Exception as e:
+                    print("Error serializing comment:", comment["id"], str(e))
+        else:
+            print("Error GETting:", url)
+    return Comment.objects.filter(post_id=pk)
+
+
 def post_foreign_comment(new_comment):
     # Save post object
     post = new_comment.post_id
@@ -257,7 +301,7 @@ def post_foreign_comment(new_comment):
     url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
     response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
                              'content-type': 'application/json', 'Accept': 'application/json'})
-    if response.status_code != 200:
+    if response.status_code != 201:
         # Let us try again for the response, with a backslash
         url = url + '/'
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={

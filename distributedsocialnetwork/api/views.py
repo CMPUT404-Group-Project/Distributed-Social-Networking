@@ -471,7 +471,6 @@ class CommentList(APIView):
                     "message": serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
             except:
-                print(e)
                 # We can't parse the body
                 return Response({
                     "query": "addComment",

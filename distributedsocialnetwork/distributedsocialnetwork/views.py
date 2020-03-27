@@ -5,17 +5,20 @@ from friend.models import Friend
 from django.conf import settings
 from post.retrieval import get_detailed_post, get_public_posts
 from author.retrieval import get_detailed_author, get_visible_posts
+from friend.retrieval import update_friends_list
 
 
 def index(request):
     context = {}
-    get_public_posts()
+    # get_public_posts()
+    # for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME):
+    #     update_friends_list(author.id)
     # We only want the authors from our server to be featured in the "featured authors" section
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
     context['authors'] = authors
     if request.user.is_authenticated:
-        get_visible_posts(request.user.id)
+        # get_visible_posts(request.user.id)
         # We give them more results on the main stream
         public_posts = Post.objects.filter(
             visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
