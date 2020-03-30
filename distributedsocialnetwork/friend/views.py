@@ -6,8 +6,12 @@ from friend.models import FollowerManager, FriendManager, Follower
 from author.models import Author
 from django.conf import settings
 from .retrieval import send_friend_request
+# This is a tool to convert urls into links that work
+from distributedsocialnetwork.views import url_convert
 
 # Create your views here.
+
+# This one is not a view.
 
 
 def show_friends(request):
@@ -20,18 +24,17 @@ def show_friends(request):
     followers = FollowerManager.get_followers('', user_id)
     following = FollowerManager.get_following('', user_id)
     friends = FriendManager.get_friends('', user_id)
-    context['friends'] = friends
-    context['followers'] = followers
-    context['following'] = following
+    context['friends'] = url_convert(friends)
+    context['followers'] = url_convert(followers)
+    context['following'] = url_convert(following)
 
     # non-fff
     # Everyone now excludes nodes, admins
-    local = Author.objects.filter(
-        is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+    local = url_convert(Author.objects.filter(
+        is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME))
     # Foreign is everyone who is not local
-    foreign = Author.objects.filter(is_node=False, is_staff=False).exclude(
-        host=settings.FORMATTED_HOST_NAME)
-    # TODO: add a separate section for displaying foreign authors
+    foreign = url_convert(Author.objects.filter(is_node=False, is_staff=False).exclude(
+        host=settings.FORMATTED_HOST_NAME))
     fff = set([current_user] + followers + following + friends)
     other_local = []
     other_foreign = []
@@ -45,7 +48,6 @@ def show_friends(request):
     context['other_local'] = other_local
     context['foreign'] = foreign
     context['other_foreign'] = other_foreign
-
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
 
