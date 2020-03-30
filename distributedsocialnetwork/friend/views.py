@@ -41,14 +41,22 @@ def show_friends(request):
     other_foreign = []
     for author in local:
         if author not in fff:
+            author.url = author.url.split(
+                'api/')[0] + author.url.split('api/')[-1]
             other_local.append(author)
     for author in foreign:
         if author not in fff:
+            author.url = author.url.split(
+                'api/')[0] + author.url.split('api/')[-1]
             other_foreign.append(author)
-    context['local'] = url_convert(local)
-    context['other_local'] = url_convert(other_local)
-    context['foreign'] = url_convert(foreign)
-    context['other_foreign'] = url_convert(other_foreign)
+    # context['local'] = url_convert(local)
+    # context['other_local'] = url_convert(other_local)
+    # context['foreign'] = url_convert(foreign)
+    # context['other_foreign'] = url_convert(other_foreign)
+    context['local'] = local
+    context['other_local'] = other_local
+    context['foreign'] = foreign
+    context['other_foreign'] = other_foreign
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
 
