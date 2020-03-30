@@ -21,6 +21,9 @@ def source_convert(queryset):
     for obj in queryset:
         obj.source = obj.source.split(
             'api/')[0] + obj.source.split('api/')[-1]
+        # Also, fix the author url
+        obj.author.url = obj.author.url.split(
+            'api/')[0] + obj.author.url.split('api/')[-1]
     return queryset
 
 
@@ -52,7 +55,4 @@ def index(request):
         posts = Post.objects.filter(
             visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
     context['posts'] = source_convert(posts)
-    for post in context['posts']:
-        post.author.url = post.author.url.split(
-            'api/')[0] + post.author.url.split('api/')[-1]
     return render(request, 'index.html', context)

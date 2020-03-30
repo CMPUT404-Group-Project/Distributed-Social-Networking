@@ -8,6 +8,7 @@ from .models import Author
 from .retrieval import get_detailed_author
 from post.models import Post
 from friend.models import Friend, Follower
+from distributedsocialnetwork.views import source_convert
 
 
 def index(request):
@@ -145,6 +146,8 @@ def view_author(request, pk):
             context['posts'] = Post.objects.filter(
                 author=context['author'].id, visibility="PUBLIC")
             context["user"] = None
+    # Convert posts to have working links
+    context['posts'] = source_convert(context['posts'])
     if request.method == "POST":
         # A post here is when we are going to send a friend request from the currently authenticated user
         if request.user.is_authenticated:

@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404, render
 import urllib
 from django.conf import settings
+from distributedsocialnetwork.views import url_convert, source_convert
 import uuid
 import requests
 # Create your views here.
@@ -160,7 +161,7 @@ class ForeignPosts(APIView):
         posts = Post.objects.filter(visibility="PUBLIC").exclude(
             origin__icontains=settings.FORMATTED_HOST_NAME)
         context = {}
-        context["posts"] = posts
+        context["posts"] = source_convert(posts)
         return render(request, 'stream.html', context)
 
 # ====== /api/posts/<post_id> ======
