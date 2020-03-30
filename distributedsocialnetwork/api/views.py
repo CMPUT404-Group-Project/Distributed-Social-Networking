@@ -1050,7 +1050,5 @@ class AuthorDetail(APIView):
         for friend in Friend.objects.get_friends(author):
             friend_dicts.append(AuthorSerializer(friend).data)
         author_dict["friends"] = friend_dicts
-        response = {
-            "author": author_dict
-        }
+        response = author_dict
         return Response(response, status=status.HTTP_200_OK)

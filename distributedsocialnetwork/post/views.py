@@ -8,6 +8,7 @@ from author.models import Author
 import datetime
 import uuid
 from .retrieval import get_detailed_post, post_foreign_comment, get_comments
+from distributedsocialnetwork.views import url_convert, source_convert
 
 # Create your views here.
 
@@ -28,7 +29,10 @@ def create_post(request):
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
             new_post.save()
-            return redirect(new_post.source)
+            # We want to redirect them to the page where they can see it
+            new_post_page = new_post.source.split(
+                'api/')[0] + new_post.source.split('api/')[-1]
+            return redirect(new_post_page)
 
     else:
         form = PostCreationForm()
@@ -53,18 +57,26 @@ def view_post(request, pk):
                     res = post_foreign_comment(new_comment)
                     if (res.status_code == 201):
                         new_comment.save()
-                        return redirect(new_comment.post_id.source)
+                        # We want to redirect them to the post page
+                        post_page = new_comment.post_id.source.split(
+                            'api/')[0] + new_comment.post_id.source.split('api/')[-1]
+                        return redirect(post_page)
                     else:
                         form = PostCommentForm()
                         form.non_field_errors = "Comment failed to post, please try again."
                 else:
                     new_comment.save()
-                    return redirect(new_comment.post_id.source)
+                    post_page = new_comment.post_id.source.split(
+                        'api/')[0] + new_comment.post_id.source.split('api/')[-1]
+                    return redirect(post_page)
             else:
                 form = PostCommentForm()
     else:
         form = PostCommentForm()
     context['post'] = get_detailed_post(post_id=pk)
+    # So that clicking the title of the post does not take you to the wrong page
+    context['post'].source = context['post'].source.split(
+        'api/')[0] + context['post'].source.split('api/')[-1]
     # Now that we have the post in the backend, we have to verify that the current user can see it.
     post_visibility = context["post"].visibility
     if post_visibility != "PUBLIC":
@@ -117,7 +129,9 @@ def edit_post(request, pk):
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
             new_post.save()
-            return redirect(new_post.source)
+            post_page = new_post.source.split(
+                'api/')[0] + new_post.source.split('api/')[-1]
+            return redirect(post_page)
 
     else:
         form = PostCreationForm(instance=post)

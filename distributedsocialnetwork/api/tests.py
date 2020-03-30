@@ -1125,13 +1125,13 @@ class AuthorDetail(APITestCase):
         url = '/api/author/' + self.author1.id[29:]
         response = self.client.get(url)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(response.data["author"]["id"], self.author1.id)
+        self.assertEquals(response.data["id"], self.author1.id)
         self.assertEquals(
-            response.data["author"]["displayName"], self.author1.displayName)
-        self.assertEquals(response.data["author"]["email"], self.author1.email)
-        self.assertEquals(response.data["author"]["url"], self.author1.url)
-        self.assertEquals(response.data["author"]["host"], self.author1.host)
-        self.assertEquals(response.data["author"]
+            response.data["displayName"], self.author1.displayName)
+        self.assertEquals(response.data["email"], self.author1.email)
+        self.assertEquals(response.data["url"], self.author1.url)
+        self.assertEquals(response.data["host"], self.author1.host)
+        self.assertEquals(response.data
                           ["github"], self.author1.github)
 
     def test_get_invalid_uuid(self):

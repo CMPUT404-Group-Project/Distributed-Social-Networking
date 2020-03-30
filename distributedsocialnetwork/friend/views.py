@@ -6,8 +6,12 @@ from friend.models import FollowerManager, FriendManager, Follower
 from author.models import Author
 from django.conf import settings
 from .retrieval import send_friend_request
+# This is a tool to convert urls into links that work
+from distributedsocialnetwork.views import url_convert
 
 # Create your views here.
+
+# This one is not a view.
 
 
 def show_friends(request):
@@ -20,9 +24,9 @@ def show_friends(request):
     followers = FollowerManager.get_followers('', user_id)
     following = FollowerManager.get_following('', user_id)
     friends = FriendManager.get_friends('', user_id)
-    context['friends'] = friends
-    context['followers'] = followers
-    context['following'] = following
+    context['friends'] = url_convert(friends)
+    context['followers'] = url_convert(followers)
+    context['following'] = url_convert(following)
 
     # non-fff
     # Everyone now excludes nodes, admins
@@ -41,11 +45,10 @@ def show_friends(request):
     for author in foreign:
         if author not in fff:
             other_foreign.append(author)
-    context['local'] = local
-    context['other_local'] = other_local
-    context['foreign'] = foreign
-    context['other_foreign'] = other_foreign
-
+    context['local'] = url_convert(local)
+    context['other_local'] = url_convert(other_local)
+    context['foreign'] = url_convert(foreign)
+    context['other_foreign'] = url_convert(other_foreign)
     context['hostname'] = settings.FORMATTED_HOST_NAME
     return render(request, 'friends.html', context)
 
