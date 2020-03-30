@@ -11,19 +11,22 @@ from friend.retrieval import update_friends_list
 def url_convert(queryset):
     # Given queryset of authors, returns the same queryset with all urls set properly
     for obj in queryset:
-        obj.url = obj.url.split(
-            'api/')[0] + obj.url.split('api/')[-1]
+        if 'api/' in obj.url:
+            obj.url = obj.url.split(
+                'api/')[0] + obj.url.split('api/')[-1]
     return queryset
 
 
 def source_convert(queryset):
     # Same as above, but for source
     for obj in queryset:
-        obj.source = obj.source.split(
-            'api/')[0] + obj.source.split('api/')[-1]
-        # Also, fix the author url
-        obj.author.url = obj.author.url.split(
-            'api/')[0] + obj.author.url.split('api/')[-1]
+        if 'api/' in obj.source:
+            obj.source = obj.source.split(
+                'api/')[0] + obj.source.split('api/')[-1]
+            # Also, fix the author url
+            if 'api/' in obj.author.url:
+                obj.author.url = obj.author.url.split(
+                    'api/')[0] + obj.author.url.split('api/')[-1]
     return queryset
 
 

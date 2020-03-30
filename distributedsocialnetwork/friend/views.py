@@ -30,29 +30,20 @@ def show_friends(request):
 
     # non-fff
     # Everyone now excludes nodes, admins
-    local = Author.objects.filter(
-        is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME)
+    local = url_convert(Author.objects.filter(
+        is_node=False, is_staff=False, host=settings.FORMATTED_HOST_NAME))
     # Foreign is everyone who is not local
-    foreign = Author.objects.filter(is_node=False, is_staff=False).exclude(
-        host=settings.FORMATTED_HOST_NAME)
-    # TODO: add a separate section for displaying foreign authors
+    foreign = url_convert(Author.objects.filter(is_node=False, is_staff=False).exclude(
+        host=settings.FORMATTED_HOST_NAME))
     fff = set([current_user] + followers + following + friends)
     other_local = []
     other_foreign = []
     for author in local:
         if author not in fff:
-            author.url = author.url.split(
-                'api/')[0] + author.url.split('api/')[-1]
             other_local.append(author)
     for author in foreign:
         if author not in fff:
-            author.url = author.url.split(
-                'api/')[0] + author.url.split('api/')[-1]
             other_foreign.append(author)
-    # context['local'] = url_convert(local)
-    # context['other_local'] = url_convert(other_local)
-    # context['foreign'] = url_convert(foreign)
-    # context['other_foreign'] = url_convert(other_foreign)
     context['local'] = local
     context['other_local'] = other_local
     context['foreign'] = foreign
