@@ -172,8 +172,7 @@ class PostDetailView(APIView):
     # The example article says this needs to be a list of one.
     # If this post is not Public or Unlisted, we should be authenticating in order to see it
     def get(self, request, pk):
-        post_query_set = Post.objects.filter(id=pk)
-        post = post_query_set[0]
+        post = get_object_or_404(Post, id=pk)
         if post.visibility != "PUBLIC":
             # We can't just send it, we have to check their authentication
             if request.user.is_authenticated:
@@ -247,24 +246,27 @@ class PostDetailView(APIView):
                 }
                 return Response(response, status=status.HTTP_401_UNAUTHORIZED)
         # If they get here with no issues, they can get sent the post.
-        response = {"query": "posts"}
-        post_list_dict = post_list_generator(request, post_query_set)
-        # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
-        response["count"] = post_list_dict["count"]
-        response["size"] = post_list_dict["page_size"]
-        if post_list_dict["next"]:
-            response["next"] = post_list_dict["next"]
-        if post_list_dict["previous"]:
-            response["previous"] = post_list_dict["previous"]
-        # We add nested comment lists for all posts
-        for post in post_list_dict["posts"]:
-            comment_query_set = Comment.objects.filter(post_id=post["id"])
-            comment_list_dict = nested_comment_list_generator(
-                request, comment_query_set, post["id"])
-            post["count"] = comment_list_dict["count"]
-            post["next"] = comment_list_dict["next"]
-            post["comments"] = comment_list_dict["comments"]
-        response["posts"] = post_list_dict["posts"]
+        post_serializer = PostSerializer(post)
+        post_dict = post_serializer.data
+        # We convert the visibleTo, categories fields
+        if post_dict['visibleTo'] == "":
+            # Not set, so "" by default
+            post_dict['visibleTo'] = []
+        else:
+            post_dict['visibleTo'] = post_dict['visibleTo'].split(',')
+        if post_dict['categories'] == "":
+            post_dict['categories'] = []
+        else:
+            post_dict['categories'] = post_dict['categories'].split(',')
+        # And we serialize the comments
+        comment_query_set = Comment.objects.filter(post_id=pk)
+        comment_list_dict = nested_comment_list_generator(
+            request, comment_query_set, str(pk))
+        post_dict["count"] = comment_list_dict["count"]
+        post_dict["next"] = comment_list_dict["next"]
+        post_dict["comments"] = comment_list_dict["comments"]
+        response = {"query": "post"}
+        response['post'] = post_dict
         return Response(response, status=status.HTTP_200_OK)
 
     def post(self, request, pk):
@@ -316,6 +318,24 @@ class PostDetailView(APIView):
                                 # We could not reach the server, or the post was not proper JSON.
                                 # We should still check the other ones
                                 continue
+                    if not foaf_verified:
+                        # Well, they are not FOAF.
+                        # However, if they can still see the post, we should be sending it anyways.
+                        if post.visibility == "PUBLIC":
+                            foaf_verified = True
+                        if post.visibility == "PRIVATE":
+                            if author_id in post.visibleTo:
+                                # We can return the post
+                                foaf_verified = True
+                        if post.visibility == "FRIENDS":
+                            # This implies that the author of the post must be friends with the author in the query
+                            if len(Author.objects.filter(id=author_id)) == 1:
+                                if Friend.objects.are_friends(Author.objects.get(id=author_id), Author.objects.get(id=post.author.id)):
+                                    foaf_verified = True
+                        if post.visibility == "SERVERONLY":
+                            # If they are a user from our server, then yes
+                            if author_id.split('author')[0] == settings.FORMATTED_HOST_NAME:
+                                foaf_verified = True
                     if foaf_verified:
                         # They are verified to see the Post, if it is set to FOAF visibility. We return the post.
                         # But we have to check some stuff first.
@@ -338,27 +358,30 @@ class PostDetailView(APIView):
                                 if author_id.split('author')[0] == settings.FORMATTED_HOST_NAME:
                                     can_send = True
                         if can_send:
-                            response = {"query": "posts"}
-                            post_query_set = Post.objects.filter(id=pk)
-                            post_list_dict = post_list_generator(
-                                request, post_query_set)
-                            # Returns [page_size, page_num, count, next_link, previous_link, serialized posts]
-                            response["count"] = post_list_dict["count"]
-                            response["size"] = post_list_dict["page_size"]
-                            if post_list_dict["next"]:
-                                response["next"] = post_list_dict["next"]
-                            if post_list_dict["previous"]:
-                                response["previous"] = post_list_dict["previous"]
-                            # We add nested comment lists for all posts
-                            for post in post_list_dict["posts"]:
-                                comment_query_set = Comment.objects.filter(
-                                    post_id=post["id"])
-                                comment_list_dict = nested_comment_list_generator(
-                                    request, comment_query_set, post["id"])
-                                post["count"] = comment_list_dict["count"]
-                                post["next"] = comment_list_dict["next"]
-                                post["comments"] = comment_list_dict["comments"]
-                            response["posts"] = post_list_dict["posts"]
+                            post_serializer = PostSerializer(post)
+                            post_dict = post_serializer.data
+                            # We convert the visibleTo, categories fields
+                            if post_dict['visibleTo'] == "":
+                                # Not set, so "" by default
+                                post_dict['visibleTo'] = []
+                            else:
+                                post_dict['visibleTo'] = post_dict['visibleTo'].split(
+                                    ',')
+                            if post_dict['categories'] == "":
+                                post_dict['categories'] = []
+                            else:
+                                post_dict['categories'] = post_dict['categories'].split(
+                                    ',')
+                            # And we serialize the comments
+                            comment_query_set = Comment.objects.filter(
+                                post_id=pk)
+                            comment_list_dict = nested_comment_list_generator(
+                                request, comment_query_set, str(pk))
+                            post_dict["count"] = comment_list_dict["count"]
+                            post_dict["next"] = comment_list_dict["next"]
+                            post_dict["comments"] = comment_list_dict["comments"]
+                            response = {"query": "post"}
+                            response['post'] = post_dict
                             return Response(response, status=status.HTTP_200_OK)
                         else:
                             response = {
