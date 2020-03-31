@@ -8,6 +8,28 @@ from author.retrieval import get_detailed_author, get_visible_posts
 from friend.retrieval import update_friends_list
 
 
+def url_convert(queryset):
+    # Given queryset of authors, returns the same queryset with all urls set properly
+    for obj in queryset:
+        if 'api/' in obj.url:
+            obj.url = obj.url.split(
+                'api/')[0] + obj.url.split('api/')[-1]
+    return queryset
+
+
+def source_convert(queryset):
+    # Same as above, but for source
+    for obj in queryset:
+        if 'api/' in obj.source:
+            obj.source = obj.source.split(
+                'api/')[0] + obj.source.split('api/')[-1]
+            # Also, fix the author url
+            if 'api/' in obj.author.url:
+                obj.author.url = obj.author.url.split(
+                    'api/')[0] + obj.author.url.split('api/')[-1]
+    return queryset
+
+
 def index(request):
     context = {}
     # get_public_posts()
@@ -16,7 +38,7 @@ def index(request):
     # We only want the authors from our server to be featured in the "featured authors" section
     authors = Author.objects.filter(
         host=settings.FORMATTED_HOST_NAME, is_node=False, is_staff=False)
-    context['authors'] = authors
+    context['authors'] = url_convert(authors)
     if request.user.is_authenticated:
         # get_visible_posts(request.user.id)
         # We give them more results on the main stream
@@ -35,5 +57,5 @@ def index(request):
     else:
         posts = Post.objects.filter(
             visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
-    context['posts'] = posts
+    context['posts'] = source_convert(posts)
     return render(request, 'index.html', context)
