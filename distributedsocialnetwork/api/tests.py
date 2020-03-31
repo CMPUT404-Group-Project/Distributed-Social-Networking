@@ -220,28 +220,27 @@ class PostDetailView(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Test that each element of a given post is the same as what we inserted
         self.assertEqual(
-            uuid.UUID(response.data["posts"][0]["id"]), uuid.UUID(self.post_id1_string))
-        self.assertEqual(response.data["posts"][0]["title"], self.title1)
-        self.assertEqual(response.data["posts"][0]["source"], self.source1)
-        self.assertEqual(response.data["posts"][0]["origin"], self.origin1)
-        self.assertEqual(response.data["posts"]
-                         [0]["description"], self.description1)
-        self.assertEqual(response.data["posts"]
-                         [0]["contentType"], self.contentType1)
-        self.assertEqual(response.data["posts"][0]["content"], self.content1)
-        self.assertEqual(response.data["posts"]
-                         [0]["categories"], self.categories1.split(','))
-        self.assertEqual(response.data["posts"]
-                         [0]["published"], self.published1.strftime('%Y-%m-%dT%H:%M:%S%z'))
-        self.assertEqual(response.data["posts"]
-                         [0]["visibility"], self.visibility1)
-        self.assertEqual(len(response.data["posts"]
-                             [0]["visibleTo"]), 0)
-        self.assertEqual(response.data["posts"][0]["unlisted"], self.unlisted1)
+            uuid.UUID(response.data["post"]["id"]), uuid.UUID(self.post_id1_string))
+        self.assertEqual(response.data["post"]["title"], self.title1)
+        self.assertEqual(response.data["post"]["source"], self.source1)
+        self.assertEqual(response.data["post"]["origin"], self.origin1)
+        self.assertEqual(response.data["post"]
+                         ["description"], self.description1)
+        self.assertEqual(response.data["post"]
+                         ["contentType"], self.contentType1)
+        self.assertEqual(response.data["post"]["content"], self.content1)
+        self.assertEqual(
+            response.data["post"]["categories"], self.categories1.split(','))
+        self.assertEqual(response.data["post"]["published"], self.published1.strftime(
+            '%Y-%m-%dT%H:%M:%S%z'))
+        self.assertEqual(response.data["post"]["visibility"], self.visibility1)
+        self.assertEqual(len(response.data["post"]
+                             ["visibleTo"]), 0)
+        self.assertEqual(response.data["post"]["unlisted"], self.unlisted1)
         # Test that there is an empty array of comments
-        self.assertEqual(len(response.data["posts"][0]["comments"]), 0)
+        self.assertEqual(len(response.data["post"]["comments"]), 0)
         # Test that there is a list of comments
-        self.assertEqual(response.data["posts"][0]["next"],
+        self.assertEqual(response.data["post"]["next"],
                          'http://testserver' + url + '/comments')
 
     def test_get_private(self):
@@ -253,12 +252,12 @@ class PostDetailView(APITestCase):
         self.client.force_authenticate(user=self.node_author)
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["posts"]), 1)
+        self.assertEqual(response.data["post"]["title"], self.post2.title)
         # We should also be able to see the post when authenticated as a user
         self.client.force_authenticate(user=self.foreignAuthor)
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["posts"]), 1)
+        self.assertEqual(response.data["post"]["title"], self.post2.title)
 
     def test_post_to_existing_uri(self):
         # This should fail
