@@ -935,11 +935,12 @@ class FriendRequest(APIView):
                     # If the host is different, we add it to the database.
                     # Else, we return a 400, because you should not use this to create authors with the same host
                     if request.user.is_node:
-                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and request.data["author"]["host"] == request.user.host:
+                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and (request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1]):
                             author = request.data["author"]
                             # We have to adjust a couple of things before we add them to our database
                             # First, they are a node, and need that node info
                             node = Node.objects.get(hostname=request.user.host)
+                            author['host'] = node.host
                             author['displayName'] = author['displayName'] + \
                                 ' (' + node.server_username + ')'
                             author_parts = author['id'].split('/')
