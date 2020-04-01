@@ -192,16 +192,12 @@ def get_detailed_post(post_id):
         if response.status_code == 200:
             post_json = response.json()
         # TODO: Talk to Group 4 about how to consistently do the detailed post endpoint
-        if 'posts' not in post_json.keys():
-            if "post" in post_json.keys():
-                post_json["posts"] = post_json["post"]
-            else:
-                # We don't have them in a wrapper, we should put them in one for compatibility
-                posts = [{}]
-                for attribute in post_json.keys():
-                    posts[0][attribute] = post_json[attribute]
-                post_json["posts"] = posts
-        post_data = post_json['posts'][0]
+        if 'post' not in post_json.keys():
+            # If 'post' is not in there, then the data is likely sent without being wrapped
+            post_json['post'] = post_json
+        post_data = post_json['post']
+        if type(post_data) == type(['foo']):
+            post_data = post_data[0]
         post = sanitize_post(post_data)
         post_data = transformSource(post_data)
 
