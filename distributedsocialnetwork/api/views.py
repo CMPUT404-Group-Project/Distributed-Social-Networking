@@ -935,12 +935,16 @@ class FriendRequest(APIView):
                     # If the host is different, we add it to the database.
                     # Else, we return a 400, because you should not use this to create authors with the same host
                     if request.user.is_node:
-                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and (request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1]):
+                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and (request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1] or request.data["author"]["host"] == request.user.host.split('://')[-1]):
                             author = request.data["author"]
                             # We have to adjust a couple of things before we add them to our database
                             # First, they are a node, and need that node info
                             node = Node.objects.get(hostname=request.user.host)
                             author['host'] = node.host
+                            # If the author id has no protocol, then we should be adding one.
+                            # This would not be an issue if Team 4 included protocol in their IDs, but they don't seem to want to do that.
+                            if 'http' not in author["id"]:
+                                author["id"] = 'https://' + author["id"]
                             author['displayName'] = author['displayName'] + \
                                 ' (' + node.server_username + ')'
                             author_parts = author['id'].split('/')
