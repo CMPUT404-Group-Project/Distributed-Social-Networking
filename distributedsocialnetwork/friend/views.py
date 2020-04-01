@@ -94,7 +94,7 @@ def accept_request(request):
         if to_friend.host != settings.FORMATTED_HOST_NAME:
             # They are a foreign author, so we have to send a friend request via the API
             response = send_friend_request(current_user.id, to_friend_id)
-            if response.status_code == 200:
+            if response.status_code == 200 or response.status_code == 201:
                 # Successful, we are good to go
                 FriendManager.add_friend("", current_user, to_friend)
                 return redirect(show_friends)
