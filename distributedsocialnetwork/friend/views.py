@@ -63,7 +63,7 @@ def follow_author(request):
             return redirect(show_friends)
         else:
             response = send_friend_request(current_user.id, to_follow_id)
-            if response.status_code == 200:
+            if response.status_code == 200 or response.status_code == 201:
                 # Successful, we are good to go
                 FollowerManager.add_follower("", current_user, to_follow)
                 return redirect(show_friends)
