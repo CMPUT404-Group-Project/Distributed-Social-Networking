@@ -192,16 +192,12 @@ def get_detailed_post(post_id):
         if response.status_code == 200:
             post_json = response.json()
         # TODO: Talk to Group 4 about how to consistently do the detailed post endpoint
-        if 'posts' not in post_json.keys():
-            if "post" in post_json.keys():
-                post_json["posts"] = post_json["post"]
-            else:
-                # We don't have them in a wrapper, we should put them in one for compatibility
-                posts = [{}]
-                for attribute in post_json.keys():
-                    posts[0][attribute] = post_json[attribute]
-                post_json["posts"] = posts
-        post_data = post_json['posts'][0]
+        if 'post' not in post_json.keys():
+            # If 'post' is not in there, then the data is likely sent without being wrapped
+            post_json['post'] = post_json
+        post_data = post_json['post']
+        if type(post_data) == type(['foo']):
+            post_data = post_data[0]
         post = sanitize_post(post_data)
         post_data = transformSource(post_data)
 
@@ -297,11 +293,16 @@ def post_foreign_comment(new_comment):
     # send POST request
     node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
     url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
-    response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                             'content-type': 'application/json', 'Accept': 'application/json'})
-    if response.status_code != 201:
-        # Let us try again for the response, with a backslash
-        url = url + '/'
+    try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code != 201:
+            # Let us try again for the response, with a backslash
+            url = url + '/'
+            response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                'content-type': 'application/json', 'Accept': 'application/json'})
+    except Exception as e:
+        print(e)
+        response = None
+
     return response

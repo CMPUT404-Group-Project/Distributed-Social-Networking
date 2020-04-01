@@ -6,6 +6,11 @@
 
 This project is a more manageable implementation of [Diaspora\*](https://diasporafoundation.org/), where each team will create a blogging website that allows users to create and share post with other users on the same site. Additionally, each site can connect, sharing users and post between sites.
 
+### Important Links
+* Website: https://dsnfof.herokuapp.com/
+* API URL: https://dsnfof.herokuapp.com/api/
+* API Documentation: https://github.com/CMPUT404-Group-Project/Distributed-Social-Networking/wiki/API-Documentation
+
 ### CMPUT404W20T03 Members
 
 ```
@@ -18,24 +23,27 @@ Ken Li
 ```
 
 ### Collaborators
-
 `N/A`
 
 ### External Source Code
-
 `N/A`
 
-### Working With Teams
+## Working With Teams
 
-```
-CMPUT404W20T00
-CMPUT404W20T00
-```
+### CMPUT404W20T04 (Mandala)
+* Website: https://cmput404-group-project-mandala.herokuapp.com/
+* API URL: https://cmput404-group-project-mandala.herokuapp.com/
+* API Documentation: https://github.com/AustinGrey/cmput404-group-project/wiki/Endpoints-Documentation
+* Repo: https://github.com/AustinGrey/cmput404-group-project
+
+### CMPUT404W20T06 (PolarBear)
+* Website: http://cmput404w20t06.herokuapp.com/
+* API URL: https://cmput404w20t06.herokuapp.com/api/
+* API Documentation: https://github.com/Petelliott/CMPUT404-project/blob/master/API.md
+* Repo: https://github.com/Petelliott/CMPUT404-project
 
 ### Directory Layout
-
 ```
-
 Distributed-Social-Networking
 │   ├── api                       (API functionality)
 │   ├── author                    (Custom User (author) Model)
@@ -104,9 +112,7 @@ sass ./bootstrap/scss/main.scss:bootstrap/css/bootstrap/bootstrap-override.css
 **Run Django server**
 
 ```
-
 $ ./manage.py runserver
-
 ```
 
 ### Running on Heroku
@@ -116,9 +122,7 @@ Link: https://dsnfof.herokuapp.com/
 **Create superuser**
 
 ```
-
 $ heroku run --app dsnfof python distributedsocialnetwork/manage.py createsuperuser
-
 ```
 
 ## Original Contributors and Licensing
@@ -132,7 +136,6 @@ Original _'docs/example-article.json'_, _'docs/project.org'_, and _'docs/swagger
 ### Other Contributors
 
 ```
-
 Abram Hindle
 Ali Sajedi
 Braedy Kuzma
@@ -142,5 +145,4 @@ Erin Torbiak
 Karim Baaba
 Kyle Richelhoff
 Olexiy Berjanskiia
-
 ```
