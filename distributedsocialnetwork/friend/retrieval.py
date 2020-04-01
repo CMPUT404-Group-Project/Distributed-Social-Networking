@@ -79,7 +79,7 @@ def update_friends_list(author_id):
             'content-type': 'application/json', 'Accept': 'application/json'})
     except:
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    if response.status_code == 200:
+    if response.status_code == 200 or response.status_code == 201:
         friends_response = response.json()
         if "authors" in friends_response:
             # We do the following for each author:
