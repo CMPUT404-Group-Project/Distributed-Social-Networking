@@ -888,10 +888,20 @@ class AuthorFriendsList(APIView):
 class AreAuthorsFriends(APIView):
     # GET returns a list of both authors if they are friends, and none if they are not
     def get(self, request, pk, service, author2_id):
-        other_user_id = "http://" + service + '/author/' + author2_id
         response = {"query": "friends"}
         author1 = get_object_or_404(Author, id__icontains=pk)
-        author2 = get_object_or_404(Author, id=other_user_id)
+        # We assume that the first author is in our DB.
+        # But also, if they are friends, they should BOTH be in our DB.
+        # So, we should not send a 404, but rather, if we cannot find the other user, we should return false.
+
+        author2_results = Author.objects.filter(id__icontains=author2_id)
+        if len(author2_results) == 0:
+            # Return false
+            response["authors"] = [author1.id, 'http://' + author2_id]
+            response["friends"] = False
+            return Response(response, status=status.HTTP_200_OK)
+        # Otherwise, we have it
+        author2 = Author.objects.get(id__icontains=author2_id)
         response["authors"] = [author1.id, author2.id]
         response["friends"] = False
         if Friend.objects.are_friends(author1, author2):
