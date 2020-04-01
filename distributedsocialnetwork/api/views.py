@@ -935,12 +935,22 @@ class FriendRequest(APIView):
                     # If the host is different, we add it to the database.
                     # Else, we return a 400, because you should not use this to create authors with the same host
                     if request.user.is_node:
-                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and (request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1] or request.data["author"]["host"] == request.user.host.split('://')[-1]):
+                        # We have a lot of stuff regarding hostname matching that is causing issues. So let's just fix this once and for all.
+                        valid_host_match = False
+                        if request.data["author"]["host"][-1] == '/':
+                            # it has a backslash, we can directly compare against the user's host.
+                            if request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1] or request.data["author"]["host"] == request.user.host.split('://')[-1]:
+                                valid_host_match = True
+                        else:
+                            # No trailing backslash
+                            if request.data["author"]["host"].split('://')[-1] == request.user.host.split('://')[-1][:-1] or request.data["author"]["host"] == request.user.host.split('://')[-1][:-1]:
+                                valid_host_match = True
+                        if request.data["author"]["host"] != settings.FORMATTED_HOST_NAME and valid_host_match:
                             author = request.data["author"]
                             # We have to adjust a couple of things before we add them to our database
                             # First, they are a node, and need that node info
                             node = Node.objects.get(hostname=request.user.host)
-                            author['host'] = node.host
+                            author['host'] = node.hostname
                             # If the author id has no protocol, then we should be adding one.
                             # This would not be an issue if Team 4 included protocol in their IDs, but they don't seem to want to do that.
                             if 'http' not in author["id"]:
@@ -968,8 +978,13 @@ class FriendRequest(APIView):
                                     author['url'] = settings.FORMATTED_HOST_NAME + \
                                         'author/' + str(uuid.uuid4().hex)
                             # We try serializing and saving the author
-                            author_serializer = AuthorSerializer(
-                                data=author)
+                            # If we have seen them before, we need to update them
+                            if len(Author.objects.filter(id=author["id"])) == 1:
+                                author_serializer = AuthorSerializer(
+                                    Author.objects.get(id=author["id"]), data=author)
+                            else:
+                                author_serializer = AuthorSerializer(
+                                    data=author)
                             if author_serializer.is_valid():
                                 author_serializer.save()
                             else:
