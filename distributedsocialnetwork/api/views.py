@@ -520,6 +520,59 @@ class PostDetailView(APIView):
                 "message": "No post with id " + str(pk) + " exists."
             }, status=status.HTTP_404_NOT_FOUND)
 
+# ====== /api/posts/getimage ======
+
+
+class GetImage(APIView):
+    def post(self, request):
+        # A post sends a body which is just a dict with the image link in it.
+        # Should return the base64 string to embed if the user is able to see it.
+        # Else, return a blank string
+        post_link = request.data['image']
+        user = Author.objects.get(id=request.data['user'])
+        # We try and get the post.
+        # If we have the post, check it locally.
+        if len(Post.objects.filter(origin=post_link)) == 1:
+            # We have it locally
+            post = Post.objects.get(origin=post_link)
+            if post.contentType in ['image/png;base64', 'image/jpeg;base64']:
+                # It is an image, at least.
+                if post.visibility == "PUBLIC":
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "PRIVATE" and user.id in post.visibleTo:
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "FRIENDS" and Friend.objects.are_friends(user, post.author):
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "FOAF" and Friend.objects.are_foaf(user, post.author):
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+            return Response({"content": ""}, status=status.HTTP_200_OK)
+        else:
+            # We gotta pull it from somewhere else
+            # We have the link, so we just have to request it.
+            try:
+                node = Node.objects.get(
+                    hostname=post_link.split('posts/')[0])
+                response = requests.get(post_link, auth=(
+                    node.node_auth_username, node.node_auth_password), headers={
+                    'content-type': 'appliation/json', 'Accept': 'application/json'})
+                if response.status_code == 200:
+                    post_json = response.json()
+                    if 'post' not in post_json.keys():
+                        # If 'post' is not in there, then the data is likely sent without being wrapped
+                        post_json['post'] = post_json
+                    if 'posts' in post_json.keys():
+                        post_json["post"] = post_json["posts"][0]
+                        del post_json["posts"]
+                    post_data = post_json['post']
+                    if type(post_data) == type(['foo']):
+                        post_data = post_data[0]
+                    return Response({"content": post_data["content"]}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"content": ""}, status=status.HTTP_200_OK)
+            except:
+                return Response({"content": ""}, status=status.HTTP_200_OK)
 
 # ====== /api/posts/<post_id>/comments ======
 
@@ -692,7 +745,7 @@ class AuthUserPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'})
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:
@@ -803,7 +856,7 @@ class AuthorPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'})
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:
