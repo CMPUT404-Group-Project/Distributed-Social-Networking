@@ -158,7 +158,7 @@ class ForeignPosts(APIView):
     # Retrieves all posts not originating from this server.
     # Returned as HTML for simple front-end integration.
     def get(self, request):
-        posts = Post.objects.filter(visibility="PUBLIC").exclude(
+        posts = Post.objects.filter(visibility="PUBLIC", unlisted=False).exclude(
             origin__icontains=settings.FORMATTED_HOST_NAME)
         context = {}
         context["posts"] = source_convert(posts)
