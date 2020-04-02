@@ -278,9 +278,13 @@ def get_comments(pk):
                     # We gotta store them, if they are from a host we can talk with.
                     if len(Node.objects.filter(hostname__icontains=comment["author"]["host"])) == 1:
                         try:
+                            node = Node.objects.get(
+                                hostname__icontains=comment["author"]["host"])
                             comment["author"]["url"] = settings.FORMATTED_HOST_NAME + \
                                 'author/' + \
                                 comment["author"]["url"].split('/author')[-1]
+                            author['displayName'] = author['displayName'] + \
+                                " (" + node.server_username + ")"
                             author_serializer = AuthorSerializer(
                                 data=comment["author"])
                             if author_serializer.is_valid():
@@ -288,7 +292,7 @@ def get_comments(pk):
                         except:
                             # We can't save them, so print errors and continue.
                             print(author_serializer.errors)
-                # Otherwise, if we have them already stored, who cares
+                # Otherwise, if we have them already stored, who cares. We won't update the author right now.
                 comment["author"] = comment["author"]["id"]
                 comment["post_id"] = pk
                 try:
