@@ -914,7 +914,6 @@ class FriendRequest(APIView):
     def post(self, request):
         # We want to send a friend request from the "author" to the "friend"
         # First off -- are they authenticated?
-        print("The request:", request.data)
         if not request.user.is_authenticated:
             return Response({
                 "query": "friendrequest",
