@@ -16,6 +16,7 @@ from django.conf import settings
 from distributedsocialnetwork.views import url_convert, source_convert
 import uuid
 import requests
+from post.retrieval import sanitize_post, sanitize_author
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -568,9 +569,35 @@ class GetImage(APIView):
                     post_data = post_json['post']
                     if type(post_data) == type(['foo']):
                         post_data = post_data[0]
-                    return Response({"content": post_data["content"]}, status=status.HTTP_200_OK)
-                else:
-                    return Response({"content": ""}, status=status.HTTP_200_OK)
+                    # We have to sanitize the post, and the author of the post
+                    post_data["author"] = sanitize_author(post_data["author"])
+                    post = sanitize_post(post_data)
+                    # And now we have to check to see if we can actually see this post
+                    if post["visibility"] == "PUBLIC":
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    if post["visibility"] == "PRIVATE" and user.id in post["visibleTo"]:
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    # Friends and FOAF visibility is trickier
+                    if post["visibility"] == "FRIENDS":
+                        if len(Author.objects.filter(id=post["author"]["id"])) == 1:
+                            # We have them in our database
+                            if Friend.objects.are_friends(Author.objects.get(id=post["author"]["id"]), user):
+                                return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    if post["visibility"] == "FOAF":
+                        # We gotta actually query the other server to see if we can see this
+                        friends_response = requests.get(post["author"]["id"] + '/friends', auth=(
+                            node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'})
+                        if friends_response.status_code == 200:
+                            response_json = friends_response.json()
+                            for author in response_json["authors"]:
+                                # A bunch of IDs
+                                if len(Author.objects.filter(id=author)) == 1:
+                                    if Friend.objects.are_friends(user, Author.objects.get(id=author)):
+                                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        return Response({"content": ""}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"content": ""}, status=status.HTTP_200_OK)
             except:
                 return Response({"content": ""}, status=status.HTTP_200_OK)
 
