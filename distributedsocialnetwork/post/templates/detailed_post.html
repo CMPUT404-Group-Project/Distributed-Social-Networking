@@ -52,7 +52,7 @@
           {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
-          <p class="m-0">{{ post.author.displayName }}</p>
+          <a href="{{post.author.url}}"><p class="m-0">{{ post.author.displayName }}</p></a>
           <p class="small m-0">{{ post.published }}</p>
         </div>
       </div>
@@ -74,7 +74,7 @@
           {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
-          <p class="m-0">{{ comment.author.displayName }}</p>
+          <a href="{{comment.author.url}}"><p class="m-0">{{ comment.author.displayName }}</p></a>
           <p class="small m-0">{{ comment.published }}</p>
         </div>
       </div>

@@ -19,6 +19,7 @@
       <form method="POST">
         {% csrf_token %} 
         <button type="submit" class="btn btn-lg btn-block btn-outline-primary" style="--primary-color:red">Delete Post</button>
+        <br>
       </form>
       {% endif %}
       <a role="button" class="btn btn-lg btn-block btn-outline-primary" href="{{post.source}}">Cancel</a>
