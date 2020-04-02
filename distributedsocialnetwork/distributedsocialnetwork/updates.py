@@ -18,7 +18,7 @@ def get_all_public_posts():
 
 def get_all_visible_posts():
     for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
-        print(get_visible_posts(author.id))
+        get_visible_posts(author.id)
 
 
 def update_all_foreign_authors():
@@ -28,11 +28,11 @@ def update_all_foreign_authors():
 
 
 def get_updates():
-    print("Getting Visible Posts\n======")
+    # print("Getting Visible Posts\n======")
     get_all_visible_posts()
-    print("Getting Public Posts\n======")
+    # print("Getting Public Posts\n======")
     get_all_public_posts()
-    print("Updating Foreign Authors\n======")
+    # print("Updating Foreign Authors\n======")
     update_all_foreign_authors()
 
 
