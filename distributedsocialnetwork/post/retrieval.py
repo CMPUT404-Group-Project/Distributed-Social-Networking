@@ -23,6 +23,11 @@ def sanitize_author(obj):
         obj["displayName"] = obj["display_name"]
         del obj["display_name"]
     if "id" in obj.keys():
+        # They sometimes give us just the UUID. They should not do that.
+        if '/author/' not in obj["id"]:
+            # We gotta change it
+            obj["id"] = obj["host"] + '/author/' + obj["id"].replace('-', "")
+        # They sometimes give us it without a protocol.
         if obj["id"][:4] != "http":
             obj["id"] = 'https://' + obj['id']
     if "host" in obj.keys():
@@ -34,6 +39,13 @@ def sanitize_author(obj):
     if "github" in obj.keys():
         if obj["github"] is None:
             obj["github"] = ""
+    if "first_name" in obj.keys():
+        obj["firstName"] = obj["first_name"]
+        del obj["first_name"]
+    if "last_name" in obj.keys():
+        obj["lastName"] = obj["last_name"]
+        del obj["last_name"]
+
     return obj
 
 
@@ -79,6 +91,18 @@ def sanitize_post(obj):
     return obj
 
 
+def sanitize_comment(obj):
+    if 'content' in obj.keys():
+        obj['comment'] = obj['content']
+    if 'author' in obj.keys():
+        obj['author'] = sanitize_author(obj['author'])
+    if 'contentType' in obj.keys():
+        if obj['contentType'] == "":
+            # Why is this blank? Whatever, treat it as plaintext
+            obj['contentType'] = 'text/plain'
+    return obj
+
+
 def transformSource(post_obj):
     del post_obj["source"]
     post_obj["source"] = settings.FORMATTED_HOST_NAME + \
@@ -88,7 +112,7 @@ def transformSource(post_obj):
 
 def get_public_posts():
     # Returns a QuerySet of all the public posts retrieved from http://service/posts
-    print("running")
+    # print("running")
     nodes = list(Node.objects.all())
     public_posts = Post.objects.none()
     for node in nodes:
@@ -96,7 +120,7 @@ def get_public_posts():
             # We have a set username and password to authenticate with this node.
             # We send a GET request to their endpoint.
             url = node.api_url + 'posts'
-            print("sending to ", url)
+            # print("sending to ", url)
             # response = requests.get(
             #     url, auth=(
             #         node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
@@ -146,8 +170,8 @@ def get_public_posts():
                         if author_serializer.is_valid():
                             try:
                                 author_serializer.save()
-                                print("saved author",
-                                      author_serializer.validated_data["displayName"])
+                                # print("saved author",
+                                #       author_serializer.validated_data["displayName"])
                                 # We now have the author saved, so we can move on to the posts
                                 if len(Post.objects.filter(origin=post["origin"])) == 1:
                                     post_serializer = PostSerializer(
@@ -157,8 +181,8 @@ def get_public_posts():
                                 if post_serializer.is_valid():
                                     try:
                                         post_serializer.save()
-                                        print("Loaded post",
-                                              post_serializer.validated_data["title"])
+                                        # print("Loaded post",
+                                        #       post_serializer.validated_data["title"])
                                         public_posts = public_posts | Post.objects.filter(
                                             id=post_serializer.validated_data["id"])
 
@@ -195,19 +219,24 @@ def get_detailed_post(post_id):
         if 'post' not in post_json.keys():
             # If 'post' is not in there, then the data is likely sent without being wrapped
             post_json['post'] = post_json
+        if 'posts' in post_json.keys():
+            post_json["post"] = post_json["posts"][0]
+            del post_json["posts"]
         post_data = post_json['post']
         if type(post_data) == type(['foo']):
             post_data = post_data[0]
+        # Let us sanitize the author
+        post_data["author"] = sanitize_author(post_data["author"])
         post = sanitize_post(post_data)
         post_data = transformSource(post_data)
 
         post_serializer = PostSerializer(local_copy, data=post)
         if post_serializer.is_valid():
-            print("it is valid")
+            # print("it is valid")
             try:
                 post_serializer.save()
-                print("Updated post",
-                      post_serializer.validated_data["title"])
+                # print("Updated post",
+                #       post_serializer.validated_data["title"])
                 new_copy = get_object_or_404(
                     Post, id=post_serializer.validated_data["id"])
 
@@ -244,6 +273,22 @@ def get_comments(pk):
         if response.status_code == 200:
             comments_json = response.json()
             for comment in comments_json["comments"]:
+                comment = sanitize_comment(comment)
+                if len(Author.objects.filter(id=comment["author"]["id"])) != 1:
+                    # We gotta store them, if they are from a host we can talk with.
+                    if len(Node.objects.filter(hostname__icontains=comment["author"]["host"])) == 1:
+                        try:
+                            comment["author"]["url"] = settings.FORMATTED_HOST_NAME + \
+                                'author/' + \
+                                comment["author"]["url"].split('/author')[-1]
+                            author_serializer = AuthorSerializer(
+                                data=comment["author"])
+                            if author_serializer.is_valid():
+                                author_serializer.save()
+                        except:
+                            # We can't save them, so print errors and continue.
+                            print(author_serializer.errors)
+                # Otherwise, if we have them already stored, who cares
                 comment["author"] = comment["author"]["id"]
                 comment["post_id"] = pk
                 try:

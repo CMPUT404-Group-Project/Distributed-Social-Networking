@@ -41,7 +41,7 @@ def get_visible_posts(author_id):
             # We have a set username and password to authenticate with this node.
             # We send a GET request to their endpoint.
             url = node.api_url + 'author/posts'
-            print("sending to ", url)
+            # print("sending to ", url)
             # Include a header containing the Author's id, other nodes may not conform to this.
             # response = requests.get(
             #     url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
@@ -92,7 +92,7 @@ def get_visible_posts(author_id):
                         if author_serializer.is_valid():
                             try:
                                 author_serializer.save()
-                                print("saved author")
+                                # print("saved author")
                                 # We now have the author saved, so we can move on to the posts
                                 if len(Post.objects.filter(id=post["id"])) == 1:
                                     post_serializer = PostSerializer(
@@ -102,8 +102,8 @@ def get_visible_posts(author_id):
                                 if post_serializer.is_valid():
                                     try:
                                         post_serializer.save()
-                                        print("Loaded post",
-                                              post_serializer.validated_data["title"])
+                                        # print("Loaded post",
+                                        #       post_serializer.validated_data["title"])
                                         visible_posts = visible_posts | Post.objects.filter(
                                             id=post_serializer.validated_data["id"])
 
@@ -129,13 +129,13 @@ def get_detailed_author(author_id):
         try:
             if len(Node.objects.filter(hostname=author_id.split('author/')[0])) != 1:
                 # We don't have the credentials to get this user's info
-                print("No credentials for this author")
+                # print("No credentials for this author")
                 return None
             local_split = author_id.split('author/')
             node = Node.objects.get(hostname=local_split[0])
             # We have to convert the url to contain a UUID if it otherwise wont
             url = node.api_url + 'author/' + local_split[-1]
-            print('sending to', url)
+            # print('sending to', url)
             response = requests.get(url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={
                 'content-type': 'appliation/json', 'Accept': 'application/json'})
@@ -178,8 +178,8 @@ def get_detailed_author(author_id):
                 if author_serializer.is_valid():
                     try:
                         author_serializer.save()
-                        print("Updated author",
-                              author_serializer.validated_data["displayName"])
+                        # print("Updated author",
+                        #       author_serializer.validated_data["displayName"])
                         new_copy = get_object_or_404(
                             Author, id=author_serializer.validated_data["id"])
                     except Exception as e:
