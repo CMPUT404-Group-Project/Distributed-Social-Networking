@@ -72,6 +72,7 @@
     xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         document.getElementById('foreign_posts').innerHTML = this.responseText;
+        get_image();
     };
     xhttp.open("GET","/api/posts/foreign", true);
     xhttp.send();
