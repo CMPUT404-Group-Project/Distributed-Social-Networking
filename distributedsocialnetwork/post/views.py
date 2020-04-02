@@ -77,6 +77,9 @@ def view_post(request, pk):
     # So that clicking the title of the post does not take you to the wrong page
     context['post'].source = context['post'].source.split(
         'api/')[0] + context['post'].source.split('api/')[-1]
+    # Also need to fix the author's URL
+    context['post'].author.url = context['post'].author.url.split(
+        'api/')[0] + context['post'].author.url.split('api/')[-1]
     # Now that we have the post in the backend, we have to verify that the current user can see it.
     post_visibility = context["post"].visibility
     if post_visibility != "PUBLIC":
@@ -103,6 +106,10 @@ def view_post(request, pk):
     context['postCommentForm'] = form
     # Comment.objects.filter(post_id=pk)
     context['comments'] = get_comments(pk)
+    # And for all the comments, we need the author's URL to be set properly
+    for comment in context["comments"]:
+        comment.author.url = comment.author.url.split(
+            'api/')[0] + comment.author.url.split('api/')[-1]
     return render(request, 'detailed_post.html', context)
 
 
@@ -159,6 +166,9 @@ def delete_post(request, pk):
     context = {}
     context["request"] = request
     context["post"] = post
+    # Modify the URL to bring us to the correct page
+    context["post"].source = context["post"].source.split(
+        'api/')[0] + context["post"].source.split('api/')[-1]
     comment_count = len(Comment.objects.filter(post_id=pk))
     context["comment_count"] = comment_count
     return render(request, 'delete_confirmation.html', context)
