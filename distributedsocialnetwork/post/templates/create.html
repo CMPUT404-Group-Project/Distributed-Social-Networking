@@ -70,7 +70,13 @@
         document.getElementById("id_image").src = e.target.result;
       }); 
     
-      FR.readAsDataURL( this.files[0] );
+      let file = this.files[0];
+      if (file && $("#id_contentType").val().includes(file.type)) {
+        FR.readAsDataURL( this.files[0] );
+      }else{
+        //Not a valid filetype!
+        $("#id_imageUpload").val("");
+      }
     }
   }
 
@@ -101,7 +107,5 @@
     create_file_uploader();
     $("#id_contentType").change(toggle_image_content);
   }
-
-  
 </script>
 {% endblock %}
