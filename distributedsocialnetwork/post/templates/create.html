@@ -21,20 +21,20 @@
           {field.help_text}}
         </small>
         {% endif %}
+        {% for error in field.errors %}
+          <p style="color: red;" class="blah">
+            {{error}}
+          </p>
+        {% endfor %}
       </div>
-      {% endfor %} {% for field in postCreationForm %}
-      {% for error in field.errors %}
-      <p style="color: red;">
-        {{error}}
-      </p>
-      {% endfor %} {% endfor %} {% if postCreationForm.non_field_errors %}
+      {% endfor %} 
+      {% if postCreationForm.non_field_errors %}
       <div style="color: red">
         <p>
           {{postCreationForm.non_field_errors}}
         </p>
       </div>
       {% endif %}
-    
       <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Submit Post</button>
     </form>
   </div>
@@ -55,5 +55,53 @@
       document.getElementById("id_visibleTo").removeAttribute("disabled");
     }
   };
+
+  //Thanks to user Roko C. Buljan answering user bombastic's question on StackOverflow: https://stackoverflow.com/a/17711190
+  function readFile() {
+    if (this.files && this.files[0]) {
+    
+      var FR= new FileReader();
+    
+      FR.addEventListener("load", function(e) {
+        let code = e.target.result;
+        code = code.replace('data:image/png;base64,','');
+        code = code.replace('data:image/jpeg;base64,','');
+        document.getElementById("id_content").value = code;
+        document.getElementById("id_image").src = e.target.result;
+      }); 
+    
+      FR.readAsDataURL( this.files[0] );
+    }
+  }
+
+  function create_file_uploader() {
+    $("#id_content").after("<input id=\"id_imageUpload\" type='file'>");
+    $("#id_content").after("<img id=\"id_image\" alt=\"Upload An Image\" style=\"max-width: 400px; max-height: 500px;\">");
+    $("#id_imageUpload").change(readFile);
+
+    toggle_image_content();
+  };
+
+  function toggle_image_content() {
+    let elem = $("#id_contentType");
+    if (elem.val() =='image/png;base64' || elem.val() == 'image/jpeg;base64') {
+      $("#id_content").hide();
+      $("#id_imageUpload").show();
+      $("#id_image").show();
+      //Set the image src to the value of the content field.
+      $("#id_image").attr("src","data:" + elem.val() + "," + $("#id_content").val());
+    }else{
+      $('#id_content').show();
+      $("#id_imageUpload").hide();
+      $("#id_image").hide();
+    }
+  };
+
+  window.onload = function () {
+    create_file_uploader();
+    $("#id_contentType").change(toggle_image_content);
+  }
+
+  
 </script>
 {% endblock %}
