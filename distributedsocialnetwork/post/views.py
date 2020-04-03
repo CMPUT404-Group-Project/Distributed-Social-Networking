@@ -28,6 +28,8 @@ def create_post(request):
             new_post.origin = settings.FORMATTED_HOST_NAME + \
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
+            if new_post.contentType == 'image/png;base64' or new_post.contentType == 'image/jpeg;base64':
+                new_post.unlisted = True
             new_post.save()
             # We want to redirect them to the page where they can see it
             new_post_page = new_post.source.split(
@@ -135,6 +137,11 @@ def edit_post(request, pk):
             new_post.origin = settings.FORMATTED_HOST_NAME + \
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
+            if new_post.contentType == 'image/png;base64' or new_post.contentType == 'image/jpeg;base64':
+                new_post.unlisted = True
+            else:
+                # This post might have been unlisted before editing, make sure it isn't now.
+                new_post.unlisted = False
             new_post.save()
             post_page = new_post.source.split(
                 'api/')[0] + new_post.source.split('api/')[-1]
