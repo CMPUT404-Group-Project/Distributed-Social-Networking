@@ -274,28 +274,29 @@ def get_comments(pk):
             comments_json = response.json()
             for comment in comments_json["comments"]:
                 comment = sanitize_comment(comment)
-                if len(Author.objects.filter(id=comment["author"]["id"])) != 1:
-                    # We gotta store them, if they are from a host we can talk with.
-                    if len(Node.objects.filter(hostname__icontains=comment["author"]["host"])) == 1:
-                        try:
-                            node = Node.objects.get(
-                                hostname__icontains=comment["author"]["host"])
-                            comment["author"]["url"] = settings.FORMATTED_HOST_NAME + \
-                                'author/' + \
-                                comment["author"]["url"].split('/author')[-1]
-                            author['displayName'] = author['displayName'] + \
-                                " (" + node.server_username + ")"
-                            author_serializer = AuthorSerializer(
-                                data=comment["author"])
-                            if author_serializer.is_valid():
-                                author_serializer.save()
-                        except:
-                            # We can't save them, so print errors and continue.
-                            print(author_serializer.errors)
-                # Otherwise, if we have them already stored, who cares. We won't update the author right now.
-                comment["author"] = comment["author"]["id"]
-                comment["post_id"] = pk
                 try:
+                    if len(Author.objects.filter(id=comment["author"]["id"])) != 1:
+                        # We gotta store them, if they are from a host we can talk with.
+                        if len(Node.objects.filter(hostname__icontains=comment["author"]["host"])) == 1:
+                            try:
+                                node = Node.objects.get(
+                                    hostname__icontains=comment["author"]["host"])
+                                comment["author"]["url"] = settings.FORMATTED_HOST_NAME + \
+                                    'author/' + \
+                                    comment["author"]["url"].split(
+                                        '/author')[-1]
+                                author['displayName'] = author['displayName'] + \
+                                    " (" + node.server_username + ")"
+                                author_serializer = AuthorSerializer(
+                                    data=comment["author"])
+                                if author_serializer.is_valid():
+                                    author_serializer.save()
+                            except:
+                                # We can't save them, so print errors and continue.
+                                print(author_serializer.errors)
+                    # Otherwise, if we have them already stored, who cares. We won't update the author right now.
+                    comment["author"] = comment["author"]["id"]
+                    comment["post_id"] = pk
                     if uuid.UUID(comment["id"]) in comm_ids:
                         comment_serializer = CommentSerializer(
                             Comment.objects.get(id=comment["id"]), data=comment)
@@ -338,13 +339,15 @@ def post_foreign_comment(new_comment):
         "post": post.origin,
         "comment": comment_data
     }
-
+    print(query)
     # send POST request
     node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
-    url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
+    # url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
+    url = post.origin + '/comments'
     try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
+        print(response)
         if response.status_code != 201:
             # Let us try again for the response, with a backslash
             url = url + '/'
