@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from author.models import Author
 from post.models import Post
-from friend.models import Friend
+from friend.models import Friend, Follower
 from django.conf import settings
 from post.retrieval import get_detailed_post, get_public_posts
 from author.retrieval import get_detailed_author, get_visible_posts
@@ -44,6 +44,9 @@ def index(request):
         # We give them more results on the main stream
         public_posts = Post.objects.filter(
             visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME, unlisted=False)
+        # We also want to include public posts from people that this user is following, or is friends with.
+        public_posts = public_posts | Post.objects.filter(
+            visibility="PUBLIC", unlisted=False, author__in=(Friend.objects.get_friends(request.user) + Follower.objects.get_following(request.user)))
         user_posts = Post.objects.filter(author=request.user)
         privated_posts = Post.objects.filter(
             visibility="PRIVATE", visibleTo__icontains=request.user.id, unlisted=False)
