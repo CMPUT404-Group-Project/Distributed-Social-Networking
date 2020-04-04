@@ -21,6 +21,14 @@
 </style> 
 {% endblock %}
 {% block content %}
+{% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-danger">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    {{ message }}
+  </div>
+  {% endfor %}
+{% endif %}
 <div class="row p-0 m-0">
   <!-- Sidebar content -->
   <div class="col sidebar bg-light">

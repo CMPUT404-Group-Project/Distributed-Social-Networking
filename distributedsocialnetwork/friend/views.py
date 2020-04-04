@@ -5,6 +5,7 @@ from django.conf import settings
 from friend.models import FollowerManager, FriendManager, Follower
 from author.models import Author
 from django.conf import settings
+from django.contrib import messages
 from .retrieval import send_friend_request
 # This is a tool to convert urls into links that work
 from distributedsocialnetwork.views import url_convert
@@ -69,6 +70,7 @@ def follow_author(request):
                 return redirect(show_friends)
             else:
                 print(response.status_code)
+                messages.add_message(request, messages.INFO, "Error following author!")
                 return redirect(show_friends)
 
     return redirect(show_friends)
@@ -100,8 +102,8 @@ def accept_request(request):
                 return redirect(show_friends)
             else:
                 # We can't add them as a friend right now.
-                # TODO: Popup message saying there was an error
                 print(response.status_code)
+                messages.add_message(request, messages.INFO, "Error accepting friend request!")
                 return redirect(show_friends)
         FriendManager.add_friend("", current_user, to_friend)
     return redirect(show_friends)
