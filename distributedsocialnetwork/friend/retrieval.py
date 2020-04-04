@@ -80,6 +80,13 @@ def update_friends_list(author_id):
     except:
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if response.status_code == 200 or response.status_code == 201:
+        # First, lets get our current list of friends for this author.
+        # If we have some in our list that are not in their list, we should remove it locally.
+        current_friends = Friend.objects.get_friends(
+            Author.objects.get(id=author_id))
+        friend_ids = []
+        for friend in list(current_friends):
+            friend_ids.append(friend.id)
         friends_response = response.json()
         if "authors" in friends_response:
             # We do the following for each author:
@@ -100,4 +107,8 @@ def update_friends_list(author_id):
                         # We aren't updating them, just adding reference to how they are friends
                         friend = Author.objects.get(id=friend_id)
                         Friend.objects.add_friend(author, friend)
+            # Finally, we check to see if they have fewer friends than before.
+            for friend_id in list(set(friend_ids) - set(friends_response["authors"])):
+                Friend.objects.remove_friend(Author.objects.get(id=author_id), Author.objects.get(
+                    id=friend_id))
     return response

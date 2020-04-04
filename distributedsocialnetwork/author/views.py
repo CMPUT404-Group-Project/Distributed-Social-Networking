@@ -9,6 +9,8 @@ from .retrieval import get_detailed_author
 from post.models import Post
 from friend.models import Friend, Follower
 from distributedsocialnetwork.views import source_convert
+from friend.retrieval import send_friend_request
+from django.conf import settings
 
 
 def index(request):
@@ -146,9 +148,10 @@ def view_author(request, pk):
             context['posts'] = Post.objects.filter(
                 author=context['author'].id, visibility="PUBLIC", unlisted=False)
             context["user"] = None
-    # Convert posts to have working links
-    context['posts'] = source_convert(context['posts'])
+        # Convert posts to have working links
+        context['posts'] = source_convert(context['posts'])
     if request.method == "POST":
+        print("the author", context["author"])
         # A post here is when we are going to send a friend request from the currently authenticated user
         if request.user.is_authenticated:
             # This should be true, but in case it is not
@@ -156,12 +159,36 @@ def view_author(request, pk):
             if not Friend.objects.are_friends(user, context["author"]):
                 if Follower.objects.is_followed_by(user, context["author"]):
                     # The have sent us a friend request, so the POST is to accept it
-                    Friend.objects.add_friend(user, context["author"])
+                    if context["author"].host == settings.FORMATTED_HOST_NAME:
+                        # Same as before
+                        Friend.objects.add_friend(user, context["author"])
+                    else:
+                        # We have to send one out
+                        response = send_friend_request(
+                            user.id, context["author"].id)
+                        if response.status_code == 200 or response.status_code == 201:
+                            # Successful, we are good to go
+                            Friend.objects.add_friend(user, context["author"])
+                        else:
+                            print(response.status_code)
                     return redirect(request.path)
                 else:
                     if not Follower.objects.is_following(user, context["author"]):
                         # Checking that they are not friends, and that we have not already sent a friend request
-                        Follower.objects.add_follower(user, context["author"])
+                        if context["author"].host == settings.FORMATTED_HOST_NAME:
+                            # Same as before
+                            Follower.objects.add_follower(
+                                user, context["author"])
+                        else:
+                            # We have to send one out
+                            response = send_friend_request(
+                                user.id, context["author"].id)
+                            if response.status_code == 200 or response.status_code == 201:
+                                # Successful, we are good to go
+                                Follower.objects.add_follower(
+                                    user, context["author"])
+                            else:
+                                print(response.status_code)
                     return redirect(request.path)
         # If they sent a post but aren't authenticated we redirect them back to the page
         return redirect(request.path)
