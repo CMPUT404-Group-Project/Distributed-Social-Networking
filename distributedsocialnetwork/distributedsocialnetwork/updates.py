@@ -18,8 +18,9 @@ def get_all_public_posts():
 
 
 def get_all_visible_posts():
-    for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
-        get_visible_posts(author.id)
+    # get_visible_posts will pull in all visible posts for all authors, but we need to supply one author id (doesn't matter who)
+    author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
+    get_visible_posts(author.id)
 
 
 def update_detailed_posts():
