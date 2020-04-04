@@ -139,6 +139,10 @@ def get_detailed_author(author_id):
             response = requests.get(url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={
                 'content-type': 'appliation/json', 'Accept': 'application/json'})
+            if response.status_code == 404:
+                # The author has been deleted!
+                Author.objects.filter(id=author_id).delete()
+                return None
             if response.status_code == 200:
                 author_json = response.json()
                 if "author" not in author_json.keys():

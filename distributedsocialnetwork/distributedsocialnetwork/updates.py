@@ -9,6 +9,7 @@ from post.retrieval import get_public_posts, get_detailed_post
 from author.retrieval import get_detailed_author, get_visible_posts
 from friend.retrieval import update_friends_list
 from author.models import Author
+from post.models import Post
 from django.conf import settings
 
 
@@ -21,6 +22,11 @@ def get_all_visible_posts():
         get_visible_posts(author.id)
 
 
+def update_detailed_posts():
+    for post in Post.objects.all().exclude(origin__icontains=settings.FORMATTED_HOST_NAME):
+        get_detailed_post(post.id)
+
+
 def update_all_foreign_authors():
     for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME):
         get_detailed_author(author.id)
@@ -30,6 +36,7 @@ def update_all_foreign_authors():
 def get_updates():
     # print("Getting Visible Posts\n======")
     get_all_visible_posts()
+    update_detailed_posts()
     # print("Getting Public Posts\n======")
     get_all_public_posts()
     # print("Updating Foreign Authors\n======")

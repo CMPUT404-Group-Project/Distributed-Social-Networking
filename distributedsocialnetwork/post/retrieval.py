@@ -213,6 +213,10 @@ def get_detailed_post(post_id):
         response = requests.get(
             url, auth=(
                 node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 404:
+            # The post is gone!
+            Post.objects.get(id=post_id).delete()
+            return None
         if response.status_code == 200:
             post_json = response.json()
         # TODO: Talk to Group 4 about how to consistently do the detailed post endpoint

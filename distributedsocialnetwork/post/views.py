@@ -76,6 +76,9 @@ def view_post(request, pk):
     else:
         form = PostCommentForm()
     context['post'] = get_detailed_post(post_id=pk)
+    if context['post'] == None:
+        # We tried to get the foreign post, but it was a 404, and it was deleted.
+        return redirect(reverse_lazy('home'))
     # So that clicking the title of the post does not take you to the wrong page
     context['post'].source = context['post'].source.split(
         'api/')[0] + context['post'].source.split('api/')[-1]
