@@ -288,7 +288,6 @@ def get_comments(pk):
         if response.status_code == 200:
             comments_json = response.json()
             for comment in comments_json["comments"]:
-                comment = sanitize_comment(comment)
                 try:
                     comment = sanitize_comment(comment)
                     if len(Author.objects.filter(id=comment["author"]["id"])) != 1:
