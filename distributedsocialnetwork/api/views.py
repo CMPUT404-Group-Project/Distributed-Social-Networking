@@ -16,6 +16,7 @@ from django.conf import settings
 from distributedsocialnetwork.views import url_convert, source_convert
 import uuid
 import requests
+from post.retrieval import sanitize_post, sanitize_author
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -158,7 +159,7 @@ class ForeignPosts(APIView):
     # Retrieves all posts not originating from this server.
     # Returned as HTML for simple front-end integration.
     def get(self, request):
-        posts = Post.objects.filter(visibility="PUBLIC").exclude(
+        posts = Post.objects.filter(visibility="PUBLIC", unlisted=False).exclude(
             origin__icontains=settings.FORMATTED_HOST_NAME)
         context = {}
         context["posts"] = source_convert(posts)
@@ -520,6 +521,91 @@ class PostDetailView(APIView):
                 "message": "No post with id " + str(pk) + " exists."
             }, status=status.HTTP_404_NOT_FOUND)
 
+# ====== /api/posts/getimage ======
+
+
+class GetImage(APIView):
+    def post(self, request):
+        # A post sends a body which is just a dict with the image link in it.
+        # Should return the base64 string to embed if the user is able to see it.
+        # Else, return a placeholder explaining that they can't see it.
+        placeholder = "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"
+        post_link = request.data['image']
+        # If the user is not logged in, it will return as "None"
+        # If this is the case, we make a new user and treat them as if they are a local user
+        if request.data["user"] == "None":
+            user = Author(id="anonymoususertemporary")
+        else:
+            user = Author.objects.get(id=request.data['user'])
+        # We try and get the post.
+        # If we have the post, check it locally.
+        if len(Post.objects.filter(origin=post_link)) == 1:
+            # We have it locally
+            post = Post.objects.get(origin=post_link)
+            if post.contentType in ['image/png;base64', 'image/jpeg;base64']:
+                # It is an image, at least.
+                if post.visibility == "PUBLIC":
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "PRIVATE" and user.id in post.visibleTo:
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "FRIENDS" and Friend.objects.are_friends(user, post.author):
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "FOAF" and Friend.objects.are_foaf(user, post.author):
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+                if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
+                    return Response({"content": post.content}, status=status.HTTP_200_OK)
+            return Response({"content": placeholder}, status=status.HTTP_200_OK)
+        else:
+            # We gotta pull it from somewhere else
+            # We have the link, so we just have to request it.
+            try:
+                node = Node.objects.get(
+                    hostname=post_link.split('posts/')[0])
+                response = requests.get(post_link, auth=(
+                    node.node_auth_username, node.node_auth_password), headers={
+                    'content-type': 'appliation/json', 'Accept': 'application/json'})
+                if response.status_code == 200:
+                    post_json = response.json()
+                    if 'post' not in post_json.keys():
+                        # If 'post' is not in there, then the data is likely sent without being wrapped
+                        post_json['post'] = post_json
+                    if 'posts' in post_json.keys():
+                        post_json["post"] = post_json["posts"][0]
+                        del post_json["posts"]
+                    post_data = post_json['post']
+                    if type(post_data) == type(['foo']):
+                        post_data = post_data[0]
+                    # We have to sanitize the post, and the author of the post
+                    post_data["author"] = sanitize_author(post_data["author"])
+                    post = sanitize_post(post_data)
+                    # And now we have to check to see if we can actually see this post
+                    if post["visibility"] == "PUBLIC":
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    if post["visibility"] == "PRIVATE" and user.id in post["visibleTo"]:
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    # Friends and FOAF visibility is trickier
+                    if post["visibility"] == "FRIENDS":
+                        if len(Author.objects.filter(id=post["author"]["id"])) == 1:
+                            # We have them in our database
+                            if Friend.objects.are_friends(Author.objects.get(id=post["author"]["id"]), user):
+                                return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                    if post["visibility"] == "FOAF":
+                        # We gotta actually query the other server to see if we can see this
+                        friends_response = requests.get(post["author"]["id"] + '/friends', auth=(
+                            node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'})
+                        if friends_response.status_code == 200:
+                            response_json = friends_response.json()
+                            for author in response_json["authors"]:
+                                # A bunch of IDs
+                                if len(Author.objects.filter(id=author)) == 1:
+                                    if Friend.objects.are_friends(user, Author.objects.get(id=author)):
+                                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        return Response({"content": placeholder}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"content": placeholder}, status=status.HTTP_200_OK)
+            except:
+                return Response({"content": placeholder}, status=status.HTTP_200_OK)
 
 # ====== /api/posts/<post_id>/comments ======
 
@@ -692,7 +778,7 @@ class AuthUserPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'})
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:
@@ -803,7 +889,7 @@ class AuthorPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'})
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:
@@ -914,7 +1000,6 @@ class FriendRequest(APIView):
     def post(self, request):
         # We want to send a friend request from the "author" to the "friend"
         # First off -- are they authenticated?
-        print("The request:", request.data)
         if not request.user.is_authenticated:
             return Response({
                 "query": "friendrequest",

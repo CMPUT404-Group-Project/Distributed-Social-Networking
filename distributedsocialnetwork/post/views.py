@@ -28,6 +28,8 @@ def create_post(request):
             new_post.origin = settings.FORMATTED_HOST_NAME + \
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
+            if new_post.contentType == 'image/png;base64' or new_post.contentType == 'image/jpeg;base64':
+                new_post.unlisted = True
             new_post.save()
             # We want to redirect them to the page where they can see it
             new_post_page = new_post.source.split(
@@ -77,6 +79,9 @@ def view_post(request, pk):
     # So that clicking the title of the post does not take you to the wrong page
     context['post'].source = context['post'].source.split(
         'api/')[0] + context['post'].source.split('api/')[-1]
+    # Also need to fix the author's URL
+    context['post'].author.url = context['post'].author.url.split(
+        'api/')[0] + context['post'].author.url.split('api/')[-1]
     # Now that we have the post in the backend, we have to verify that the current user can see it.
     post_visibility = context["post"].visibility
     if post_visibility != "PUBLIC":
@@ -103,6 +108,10 @@ def view_post(request, pk):
     context['postCommentForm'] = form
     # Comment.objects.filter(post_id=pk)
     context['comments'] = get_comments(pk)
+    # And for all the comments, we need the author's URL to be set properly
+    for comment in context["comments"]:
+        comment.author.url = comment.author.url.split(
+            'api/')[0] + comment.author.url.split('api/')[-1]
     return render(request, 'detailed_post.html', context)
 
 
@@ -128,6 +137,11 @@ def edit_post(request, pk):
             new_post.origin = settings.FORMATTED_HOST_NAME + \
                 'posts/' + str(new_post.id)
             new_post.source = new_post.origin
+            if new_post.contentType == 'image/png;base64' or new_post.contentType == 'image/jpeg;base64':
+                new_post.unlisted = True
+            else:
+                # This post might have been unlisted before editing, make sure it isn't now.
+                new_post.unlisted = False
             new_post.save()
             post_page = new_post.source.split(
                 'api/')[0] + new_post.source.split('api/')[-1]
@@ -159,6 +173,9 @@ def delete_post(request, pk):
     context = {}
     context["request"] = request
     context["post"] = post
+    # Modify the URL to bring us to the correct page
+    context["post"].source = context["post"].source.split(
+        'api/')[0] + context["post"].source.split('api/')[-1]
     comment_count = len(Comment.objects.filter(post_id=pk))
     context["comment_count"] = comment_count
     return render(request, 'delete_confirmation.html', context)

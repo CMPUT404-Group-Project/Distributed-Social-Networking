@@ -43,19 +43,19 @@ def index(request):
         # get_visible_posts(request.user.id)
         # We give them more results on the main stream
         public_posts = Post.objects.filter(
-            visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
+            visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME, unlisted=False)
         user_posts = Post.objects.filter(author=request.user)
         privated_posts = Post.objects.filter(
-            visibility="PRIVATE", visibleTo__icontains=request.user.id)
+            visibility="PRIVATE", visibleTo__icontains=request.user.id, unlisted=False)
         serveronly_posts = Post.objects.filter(
-            visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user))
+            visibility="SERVERONLY", author__in=Friend.objects.get_friends(request.user), unlisted=False)
         friend_posts = Post.objects.filter(
-            visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user))
+            visibility="FRIENDS", author__in=Friend.objects.get_friends(request.user), unlisted=False)
         foaf_posts = Post.objects.filter(
-            visibility="FOAF", author__in=Friend.objects.get_foaf(request.user))
+            visibility="FOAF", author__in=Friend.objects.get_foaf(request.user), unlisted=False)
         posts = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
     else:
         posts = Post.objects.filter(
-            visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME)
+            visibility="PUBLIC", origin__icontains=settings.FORMATTED_HOST_NAME, unlisted=False)
     context['posts'] = source_convert(posts)
     return render(request, 'index.html', context)

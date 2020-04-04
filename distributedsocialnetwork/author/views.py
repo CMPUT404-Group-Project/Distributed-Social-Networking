@@ -127,9 +127,9 @@ def view_author(request, pk):
             else:
                 # We return the posts this user can see
                 author_public_posts = Post.objects.filter(
-                    author=context["author"].id, visibility="PUBLIC")
+                    author=context["author"].id, visibility="PUBLIC", unlisted=False)
                 author_private_posts = Post.objects.filter(
-                    author=context["author"].id, visibility="PRIVATE", visibleTo__icontains=request.user.id)
+                    author=context["author"].id, visibility="PRIVATE", visibleTo__icontains=request.user.id, unlisted=False)
                 post_query_set = author_private_posts | author_public_posts
                 if Friend.objects.are_friends(context["author"], request.user):
                     # They are friends, so they can see some other posts
@@ -139,12 +139,12 @@ def view_author(request, pk):
                         visibility="FRIENDS", author=context["author"].id)
                     # They are friends, so they have to get FOAF posts
                     foaf_posts = Post.objects.filter(
-                        visibility="FOAF", author=context["author"].id)
+                        visibility="FOAF", author=context["author"].id, unlisted=False)
                     post_query_set = post_query_set | serveronly_posts | friend_posts | foaf_posts
                 context["posts"] = post_query_set
         else:
             context['posts'] = Post.objects.filter(
-                author=context['author'].id, visibility="PUBLIC")
+                author=context['author'].id, visibility="PUBLIC", unlisted=False)
             context["user"] = None
     # Convert posts to have working links
     context['posts'] = source_convert(context['posts'])

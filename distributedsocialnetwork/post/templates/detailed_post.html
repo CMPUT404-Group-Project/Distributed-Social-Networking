@@ -52,7 +52,7 @@
           {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
-          <p class="m-0">{{ post.author.displayName }}</p>
+          <a href="{{post.author.url}}"><p class="m-0">{{ post.author.displayName }}</p></a>
           <p class="small m-0">{{ post.published }}</p>
         </div>
       </div>
@@ -74,7 +74,7 @@
           {% endif %}
         </div>
         <div class="card-footer text-muted text-right p-2">
-          <p class="m-0">{{ comment.author.displayName }}</p>
+          <a href="{{comment.author.url}}"><p class="m-0">{{ comment.author.displayName }}</p></a>
           <p class="small m-0">{{ comment.published }}</p>
         </div>
       </div>
@@ -103,4 +103,37 @@
       <!-- Right sidebar content goes here -->
     </div>
   </div>
+  <script>
+    // For replacing embedded image where a url from one of our posts is in there
+    function get_image(){
+      var markdownPosts = [...document.getElementsByClassName('markdown-content')];
+      for(var post of markdownPosts){
+        // We check for if there is an image tag in the post.
+        // For those image tags, if they link to another post, we should request the image content and replace it.
+        var imageTags = [...post.getElementsByTagName("img")];
+        for(let image of imageTags){
+          // We check if it requests from a post
+          if(image.src.includes('/posts/')){
+            // Gonna take that as a sign that this is a post
+            let xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange=function(){
+              if (xhttp.readyState === 4 && xhttp.status === 200){
+                var json = JSON.parse(xhttp.responseText);
+                image.src = "data:image/png;base64," + json["content"];
+              };
+            };
+            xhttp.open("POST", "/api/posts/getimage", true);
+            xhttp.setRequestHeader('Content-Type', 'application/json');
+            xhttp.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+            var body = JSON.stringify({
+              "user":'{{request.user.id}}',
+              "image": image.src
+            });
+            xhttp.send(body);
+          }
+        }
+      }
+    }
+    get_image()
+  </script>
 {% endblock %}
