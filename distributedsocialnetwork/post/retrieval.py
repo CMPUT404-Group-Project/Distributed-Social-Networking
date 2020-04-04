@@ -26,13 +26,18 @@ def sanitize_author(obj):
         # They sometimes give us just the UUID. They should not do that.
         if '/author/' not in obj["id"]:
             # We gotta change it
-            obj["id"] = obj["host"] + '/author/' + obj["id"].replace('-', "")
+            if "host" in obj.keys():
+                if obj["host"] is not None:
+                    # If they don't have a host, we have bigger issues
+                    obj["id"] = obj["host"] + '/author/' + \
+                        obj["id"].replace('-', "")
         # They sometimes give us it without a protocol.
         if obj["id"][:4] != "http":
             obj["id"] = 'https://' + obj['id']
     if "host" in obj.keys():
-        if obj["host"][:4] != 'http':
-            obj["host"] = 'https://' + obj["host"]
+        if obj["host"] is not None:
+            if obj["host"][:4] != 'http':
+                obj["host"] = 'https://' + obj["host"]
     if "url" in obj.keys():
         if obj["url"][:4] != 'http':
             obj["url"] = 'https://' + obj["url"]
@@ -100,6 +105,12 @@ def sanitize_comment(obj):
         if obj['contentType'] == "":
             # Why is this blank? Whatever, treat it as plaintext
             obj['contentType'] = 'text/plain'
+    if "published" in obj.keys():
+        try:
+            obj["published"] = datetime.datetime.strptime(
+                obj["published"], "%Y-%m-%d").strftime('%Y-%m-%dT%H:%M:%S%z')
+        except:
+            pass
     return obj
 
 
@@ -279,6 +290,7 @@ def get_comments(pk):
             for comment in comments_json["comments"]:
                 comment = sanitize_comment(comment)
                 try:
+                    comment = sanitize_comment(comment)
                     if len(Author.objects.filter(id=comment["author"]["id"])) != 1:
                         # We gotta store them, if they are from a host we can talk with.
                         if len(Node.objects.filter(hostname__icontains=comment["author"]["host"])) == 1:
@@ -301,6 +313,21 @@ def get_comments(pk):
                     # Otherwise, if we have them already stored, who cares. We won't update the author right now.
                     comment["author"] = comment["author"]["id"]
                     comment["post_id"] = pk
+                    # But we have a dilemma now.
+                    # Team 6 uses ints for their comment ids. Which means, when we pull in a comment, it will not have the correct id.
+                    # Because of this, if we are not careful, we can create duplicate comments.
+                    # So we have to try and find a match in our local database for the comment first, without relying on ID.
+                    try:
+                        uuid_version = uuid.UUID(comment["id"])
+                    except:
+                        # It is not a UUID, because it's an int.
+                        if len(Comment.objects.filter(author=comment["author"], comment=comment["comment"], post_id=local_copy)) == 0:
+                            # We don't have this comment stored. Let's get a new UUID for it.
+                            comment["id"] = str(uuid.uuid4().hex)
+                        else:
+                            # We have it stored. We can update it as long as we use the same id as before.
+                            comment["id"] = str(Comment.objects.filter(
+                                author=comment["author"], comment=comment["comment"], post_id=local_copy)[0].id)
                     if uuid.UUID(comment["id"]) in comm_ids:
                         comment_serializer = CommentSerializer(
                             Comment.objects.get(id=comment["id"]), data=comment)
