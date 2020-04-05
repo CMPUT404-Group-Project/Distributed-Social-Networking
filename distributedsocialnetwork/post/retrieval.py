@@ -208,6 +208,9 @@ def get_detailed_post(post_id):
     local_copy = get_object_or_404(Post, id=post_id)
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
+        #Ignore github posts
+        if local_split[2] == 'api.github.com':
+            return local_copy
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'posts/' + local_split[-1]
         response = requests.get(
@@ -270,6 +273,9 @@ def get_comments(pk):
     local_copy = get_object_or_404(Post, id=pk)
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
+        #Ignore github posts
+        if local_split[2] == 'api.github.com':
+            return Comment.objects.filter(post_id=pk)
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'posts/' + local_split[-1] + '/comments'
         response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),

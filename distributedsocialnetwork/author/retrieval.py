@@ -8,6 +8,7 @@ from author.serializers import AuthorSerializer
 import requests
 import datetime
 import uuid
+import re
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 
@@ -199,3 +200,126 @@ def get_detailed_author(author_id):
     else:
         # We have this user already, it belongs to our server
         return get_object_or_404(Author, id=author_id)
+
+# Get the github activity of the given author.
+# Creates private posts for every new github
+# event, as authors should only be able to
+# see their own github activity stream.
+def get_github_activity(author_id):
+    author = get_object_or_404(Author, id=author_id)
+    # If the author has set a github profile URL
+    if author.github:
+        githubUsername = author.github.rsplit('/', 1)[-1]
+        url = f"https://api.github.com/users/{githubUsername}/received_events/public"
+        response = requests.get(
+                url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        if response.status_code == 200:
+            response_json = response.json()
+            for event in response_json:
+                # Set the origin to include the event's github id, so we can
+                # check if we've seen it before.
+                origin = url + "/" + str(event["id"])
+                if len(Post.objects.filter(origin=origin)) == 1:
+                    # already seen this event
+                    continue
+                try:
+                    # Split up the event type with spaces.
+                    title = "Github " + re.sub( r"([A-Z])", r" \1", event["type"])
+                    content = parse_github_event(event)
+                    published = datetime.datetime.strptime(
+                        event["created_at"], '%Y-%m-%dT%H:%M:%SZ')
+                    post = Post(
+                        title=title,
+                        description=event["type"],
+                        contentType='text/markdown',
+                        content=content,
+                        author=author,
+                        categories='github',
+                        published=published,
+                        visibility= 'PRIVATE'
+                    )
+                    post.origin = origin
+                    post.source = settings.FORMATTED_HOST_NAME + \
+                        'posts/' + str(post.id)
+                    post.save()
+                except:
+                    print("Failed to import github event!")
+                    
+def parse_github_event(event):
+    event_type = event["type"]
+    actor_login = event["actor"]["login"]
+    actor_url = event["actor"]["url"].replace("api.github.com/users","github.com")
+    payload = event["payload"]
+    repo = event["repo"]
+    repo_name = repo["name"]
+    repo_url = repo["url"].replace("api.github.com/repos","github.com")
+    if event_type=='CreateEvent':
+        ref = payload["ref"]
+        ref_type = payload["ref_type"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> created "
+            f"{ref_type} {ref} in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+        )
+    elif event_type=='DeleteEvent':
+        ref = payload["ref"]
+        ref_type = payload["ref_type"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> deleted "
+            f"{ref_type} {ref} in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+        )
+    elif event_type=='IssuesEvent':
+        action = payload["action"]
+        issue_url = payload["issue"]["html_url"]
+        issue_num = payload["issue"]["number"]
+        extra = ""
+        if action == 'assigned' or action == 'unassigned':
+            extra = " to " + payload["issue"]["assignee"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> {action} "
+            f"<a href=\"{issue_url}\">Issue #{issue_num}</a>{extra}</p>"
+        )
+    elif event_type=='IssueCommentEvent':
+        action = payload["action"]
+        issue_url = payload["issue"]["html_url"]
+        issue_num = payload["issue"]["number"]
+        comment_body = payload["comment"]["body"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> {action} "
+            f"a comment on <a href=\"{issue_url}\">Issue #{issue_num}</a> "
+            f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+            f"<p>{comment_body}</p>"
+        )
+    elif event_type=='PullRequestEvent':
+        action = payload["action"]
+        pr_num = payload["number"]
+        pr = payload["pull_request"]
+        pr_url = pr["html_url"]
+        if action == 'closed':
+            if pr["merged"]:
+                return (
+                    f"<p><a href=\"{actor_url}\">{actor_login}</a> "
+                    f"merged <a href=\"{pr_url}\">Pull Request #{pr_num}</a> "
+                    f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+                )
+            else:
+                return (
+                    f"<p><a href=\"{actor_url}\">{actor_login}</a> "
+                    f"closed <a href=\"{pr_url}\">Pull Request #{pr_num}</a> "
+                    f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+                )
+        extra = ""
+        if action == 'assigned' or action == 'unassigned':
+            extra = " to " + payload["issue"]["assignee"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> {action} "
+            f"<a href=\"{pr_url}\">Pull Request #{pr_num}</a>{extra} "
+            f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+        )
+    elif event_type=='PushEvent':
+        ref = payload["ref"]
+        return (
+            f"<p><a href=\"{actor_url}\">{actor_login}</a> pushed to "
+            f"{ref} in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
+        )
+    else:
+        return f"<p><a href=\"{actor_url}\">{actor_login}</a> in <a href=\"{repo_url}\">{repo_name}</a></p>"
