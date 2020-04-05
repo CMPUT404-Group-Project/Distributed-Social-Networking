@@ -31,13 +31,11 @@ def create_author(request):
         if form.is_valid():
             form.save()
             return redirect(reverse_lazy('home'))
-        else:
-            context['form'] = form
 
     else:
         form = AuthorCreationForm()
-        context['form'] = form
 
+    context['form'] = form
     return render(request, 'register.html', context)
 
 
@@ -172,7 +170,8 @@ def view_author(request, pk):
                             Friend.objects.add_friend(user, context["author"])
                         else:
                             print(response.status_code)
-                            messages.add_message(request, messages.INFO, "Error accepting friend request!")
+                            messages.add_message(
+                                request, messages.INFO, "Error accepting friend request!")
                     return redirect(request.path)
                 else:
                     if not Follower.objects.is_following(user, context["author"]):
@@ -191,7 +190,8 @@ def view_author(request, pk):
                                     user, context["author"])
                             else:
                                 print(response.status_code)
-                                messages.add_message(request, messages.INFO, "Error sending friend request!")
+                                messages.add_message(
+                                    request, messages.INFO, "Error sending friend request!")
                     return redirect(request.path)
         # If they sent a post but aren't authenticated we redirect them back to the page
         return redirect(request.path)
