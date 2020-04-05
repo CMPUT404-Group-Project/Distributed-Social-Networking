@@ -19,8 +19,9 @@ def get_all_public_posts():
 
 def get_all_visible_posts():
     # get_visible_posts will pull in all visible posts for all authors, but we need to supply one author id (doesn't matter who)
-    author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
-    get_visible_posts(author.id)
+    if len(Author.objects.filter(host=settings.FORMATTED_HOST_NAME)) != 0:
+        author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
+        get_visible_posts(author.id)
 
 
 def get_all_github_activity():
@@ -35,9 +36,9 @@ def update_detailed_posts():
 
 
 def update_all_foreign_authors():
-    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME):
-        get_detailed_author(author.id)
+    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME, is_node=False):
         update_friends_list(author.id)
+        get_detailed_author(author.id)
 
 
 def get_updates():

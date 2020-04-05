@@ -219,7 +219,7 @@ def get_detailed_post(post_id):
     local_copy = get_object_or_404(Post, id=post_id)
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
-        #Ignore github posts
+        # Ignore github posts
         if local_split[2] == 'api.github.com':
             return local_copy
         node = Node.objects.get(hostname__contains=local_split[2])
@@ -233,47 +233,42 @@ def get_detailed_post(post_id):
             return None
         if response.status_code == 200:
             post_json = response.json()
-        # TODO: Talk to Group 4 about how to consistently do the detailed post endpoint
-        if 'post' not in post_json.keys():
-            # If 'post' is not in there, then the data is likely sent without being wrapped
-            post_json['post'] = post_json
-        if 'posts' in post_json.keys():
-            post_json["post"] = post_json["posts"][0]
-            del post_json["posts"]
-        post_data = post_json['post']
-        if type(post_data) == type(['foo']):
-            post_data = post_data[0]
-        # Let us sanitize the author
-        post_data["author"] = sanitize_author(post_data["author"])
-        post = sanitize_post(post_data)
-        post_data = transformSource(post_data)
+            # TODO: Talk to Group 4 about how to consistently do the detailed post endpoint
+            if 'post' not in post_json.keys():
+                # If 'post' is not in there, then the data is likely sent without being wrapped
+                post_json['post'] = post_json
+            if 'posts' in post_json.keys():
+                post_json["post"] = post_json["posts"][0]
+                del post_json["posts"]
+            post_data = post_json['post']
+            if type(post_data) == type(['foo']):
+                post_data = post_data[0]
+            # Let us sanitize the author
+            post_data["author"] = sanitize_author(post_data["author"])
+            post = sanitize_post(post_data)
+            post_data = transformSource(post_data)
 
-        post_serializer = PostSerializer(local_copy, data=post)
-        if post_serializer.is_valid():
-            # print("it is valid")
-            try:
-                post_serializer.save()
-                # print("Updated post",
-                #       post_serializer.validated_data["title"])
-                new_copy = get_object_or_404(
-                    Post, id=post_serializer.validated_data["id"])
-
-                # new_copy = Post.objects.filter(
-                #     id=)
-            except Exception as e:
-                print("Error saving post",
-                      post_serializer.validated_data["title"], str(e))
-        else:
-            print("Error encountered:",
-                  post_serializer.errors)
-            return local_copy
-        # new_copy = local_copy  # FOR NOW
-        return new_copy
-    else:
-        return local_copy
-    # url =
-    # response = requests.get(
-    #             url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
+            post_serializer = PostSerializer(local_copy, data=post)
+            if post_serializer.is_valid():
+                # print("it is valid")
+                try:
+                    post_serializer.save()
+                    # print("Updated post",
+                    #       post_serializer.validated_data["title"])
+                    new_copy = get_object_or_404(
+                        Post, id=post_serializer.validated_data["id"])
+                    return new_copy
+                    # new_copy = Post.objects.filter(
+                    #     id=)
+                except Exception as e:
+                    print("Error saving post",
+                          post_serializer.validated_data["title"], str(e))
+            else:
+                print("Error encountered:",
+                      post_serializer.errors)
+                return local_copy
+    # If it gets this far, return what is cached.
+    return local_copy
 
 
 def get_comments(pk):
@@ -284,7 +279,7 @@ def get_comments(pk):
     local_copy = get_object_or_404(Post, id=pk)
     if(local_copy.origin != local_copy.source):
         local_split = local_copy.origin.split('/')
-        #Ignore github posts
+        # Ignore github posts
         if local_split[2] == 'api.github.com':
             return Comment.objects.filter(post_id=pk)
         node = Node.objects.get(hostname__contains=local_split[2])
