@@ -27,12 +27,24 @@
         {% endif %}
       
         {% for error in field.errors %}
-        <p style="color: red;">{{error}}</p>
+          <p style="color: red;">{{error}}</p>
         {% endfor %}
       </div>
       </div>
     </p>
     {% endfor %}
+
+    {% for field in form %}
+      {% for error in field.errors %}
+          <p style="color: red;">{{error}}</p>
+      {% endfor %}
+    {% endfor %}
+        
+    {% if form.non_field_errors %}
+        <div style="color: red">
+            <p>{{form.non_field_errors}}</p>
+        </div>
+    {% endif %}
     <button type="submit" class="btn btn-lg btn-block btn-outline-primary">Register</button>
     </form>
   </div>

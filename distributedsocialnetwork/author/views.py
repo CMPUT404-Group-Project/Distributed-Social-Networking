@@ -31,13 +31,11 @@ def create_author(request):
         if form.is_valid():
             form.save()
             return redirect(reverse_lazy('home'))
-        else:
-            context['form'] = form
 
     else:
         form = AuthorCreationForm()
-        context['form'] = form
 
+    context['form'] = form
     return render(request, 'register.html', context)
 
 
