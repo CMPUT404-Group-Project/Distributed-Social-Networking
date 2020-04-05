@@ -76,8 +76,8 @@
 <script>
   // Disabling the visibleTo field if it's not needed
   // Thanks to user Praveen Kumar Purushothaman answering user french_dev's question on StackOverflow: https://stackoverflow.com/a/30867314
-  if(document.getElementById("id_contentType").value !== 'text/markdown'){
-    document.getElementById("images-container").setAttribute("hidden", "hidden");
+  if(document.getElementById("id_visibleTo").value !== 'PRIVATE'){
+    document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
   }
   document.getElementById("id_visibility").onchange = function () {
     document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
@@ -87,7 +87,9 @@
   };
 
   // Disabling the images unless the style is markdown
-  document.getElementById("images-container").setAttribute("hidden", "hidden");
+  if(document.getElementById("id_contentType").value !== 'text/markdown'){
+    document.getElementById("images-container").setAttribute("hidden", "hidden");
+  }
   document.getElementById("id_contentType").onchange = function(){
     document.getElementById("images-container").setAttribute("hidden", "hidden");
     if (this.value == 'text/markdown'){
