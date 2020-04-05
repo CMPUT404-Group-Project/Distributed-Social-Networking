@@ -6,7 +6,7 @@ from schedule import Scheduler
 import threading
 import time
 from post.retrieval import get_public_posts, get_detailed_post
-from author.retrieval import get_detailed_author, get_visible_posts
+from author.retrieval import get_detailed_author, get_visible_posts, get_github_activity
 from friend.retrieval import update_friends_list
 from author.models import Author
 from post.models import Post
@@ -22,6 +22,10 @@ def get_all_visible_posts():
     author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
     get_visible_posts(author.id)
 
+def get_all_github_activity():
+    # Get the github activity for all our local authors.
+    for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
+        get_github_activity(author_id=author.id)
 
 def update_detailed_posts():
     for post in Post.objects.all().exclude(origin__icontains=settings.FORMATTED_HOST_NAME):
@@ -35,6 +39,7 @@ def update_all_foreign_authors():
 
 
 def get_updates():
+    get_all_github_activity()
     # print("Getting Visible Posts\n======")
     get_all_visible_posts()
     update_detailed_posts()
@@ -42,7 +47,7 @@ def get_updates():
     get_all_public_posts()
     # print("Updating Foreign Authors\n======")
     update_all_foreign_authors()
-
+    
 
 def run_continuously(self, interval=1):
     """Continuously run, while executing pending jobs at each elapsed
