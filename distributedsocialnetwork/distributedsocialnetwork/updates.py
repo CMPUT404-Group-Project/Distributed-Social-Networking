@@ -22,10 +22,12 @@ def get_all_visible_posts():
     author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
     get_visible_posts(author.id)
 
+
 def get_all_github_activity():
     # Get the github activity for all our local authors.
     for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
         get_github_activity(author_id=author.id)
+
 
 def update_detailed_posts():
     for post in Post.objects.all().exclude(origin__icontains=settings.FORMATTED_HOST_NAME):
@@ -39,15 +41,21 @@ def update_all_foreign_authors():
 
 
 def get_updates():
-    get_all_github_activity()
-    # print("Getting Visible Posts\n======")
-    get_all_visible_posts()
-    update_detailed_posts()
-    # print("Getting Public Posts\n======")
-    get_all_public_posts()
-    # print("Updating Foreign Authors\n======")
+    print("====== Updating Foreign Authors ======")
     update_all_foreign_authors()
-    
+    print('++++++ Foreign Author Update Complete ++++++')
+    print("====== Pulling GitHub Activity ======")
+    get_all_github_activity()
+    print('++++++ GitHub Pull Complete ++++++')
+    print("====== Getting Visible Posts ======")
+    get_all_visible_posts()
+    print('++++++ Visible Posts Pull Complete ++++++')
+    print("====== Updating Foreign Posts ======")
+    update_detailed_posts()
+    print('++++++ Foreign Post Update Complete ++++++')
+    # get_all_public_posts()
+    # print("Updating Foreign Authors\n======")
+
 
 def run_continuously(self, interval=1):
     """Continuously run, while executing pending jobs at each elapsed
