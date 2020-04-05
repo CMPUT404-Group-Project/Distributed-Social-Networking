@@ -33,7 +33,7 @@ class VisiblePosts(APITestCase):
         self.author1 = self.testAuthor
         self.categories1 = "first,second"
         self.published1 = datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.visibility1 = "PUBLIC"
         self.visibleTo1 = ""
         self.unlisted1 = False
@@ -54,7 +54,7 @@ class VisiblePosts(APITestCase):
         self.author2 = self.testAuthor
         self.categories2 = "first"
         self.published2 = datetime.datetime(
-            2020, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2020, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.visibility2 = "PUBLIC"
         self.visibleTo2 = ""
         self.unlisted2 = False
@@ -115,8 +115,6 @@ class VisiblePosts(APITestCase):
         self.assertEqual(response.data["posts"]
                          [0]["categories"], self.categories2.split(','))
         self.assertEqual(response.data["posts"]
-                         [0]["published"], self.published2.strftime('%Y-%m-%dT%H:%M:%S%z'))
-        self.assertEqual(response.data["posts"]
                          [0]["visibility"], self.visibility2)
         self.assertEqual(len(response.data["posts"]
                              [0]["visibleTo"]), 0)
@@ -172,7 +170,7 @@ class PostDetailView(APITestCase):
         self.author1 = self.testAuthor
         self.categories1 = "first,second"
         self.published1 = datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.visibility1 = "PUBLIC"
         self.visibleTo1 = ""
         self.unlisted1 = False
@@ -186,7 +184,7 @@ class PostDetailView(APITestCase):
         self.post2 = Post.objects.create(id=uuid.UUID("73cc3f3c-0654-493f-a529-72413297ba55"), title="Test2",
                                          source=settings.FORMATTED_HOST_NAME, description="Description2", contentType="text/plain", content="Test content",
                                          author=self.author1, categories="",
-                                         published=datetime.datetime(2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=self.foreignAuthorId, unlisted=False)
+                                         published=datetime.datetime(2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PRIVATE", visibleTo=self.foreignAuthorId, unlisted=False)
         # POST data, this is a valid post
         self.post_data = {
             "query": "addPost",
@@ -220,27 +218,26 @@ class PostDetailView(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Test that each element of a given post is the same as what we inserted
         self.assertEqual(
-            uuid.UUID(response.data["post"]["id"]), uuid.UUID(self.post_id1_string))
-        self.assertEqual(response.data["post"]["title"], self.title1)
-        self.assertEqual(response.data["post"]["source"], self.source1)
-        self.assertEqual(response.data["post"]["origin"], self.origin1)
-        self.assertEqual(response.data["post"]
+            uuid.UUID(response.data["posts"][0]["id"]), uuid.UUID(self.post_id1_string))
+        self.assertEqual(response.data["posts"][0]["title"], self.title1)
+        self.assertEqual(response.data["posts"][0]["source"], self.source1)
+        self.assertEqual(response.data["posts"][0]["origin"], self.origin1)
+        self.assertEqual(response.data["posts"][0]
                          ["description"], self.description1)
-        self.assertEqual(response.data["post"]
+        self.assertEqual(response.data["posts"][0]
                          ["contentType"], self.contentType1)
-        self.assertEqual(response.data["post"]["content"], self.content1)
+        self.assertEqual(response.data["posts"][0]["content"], self.content1)
         self.assertEqual(
-            response.data["post"]["categories"], self.categories1.split(','))
-        self.assertEqual(response.data["post"]["published"], self.published1.strftime(
-            '%Y-%m-%dT%H:%M:%S%z'))
-        self.assertEqual(response.data["post"]["visibility"], self.visibility1)
-        self.assertEqual(len(response.data["post"]
+            response.data["posts"][0]["categories"], self.categories1.split(','))
+        self.assertEqual(response.data["posts"]
+                         [0]["visibility"], self.visibility1)
+        self.assertEqual(len(response.data["posts"][0]
                              ["visibleTo"]), 0)
-        self.assertEqual(response.data["post"]["unlisted"], self.unlisted1)
+        self.assertEqual(response.data["posts"][0]["unlisted"], self.unlisted1)
         # Test that there is an empty array of comments
-        self.assertEqual(len(response.data["post"]["comments"]), 0)
+        self.assertEqual(len(response.data["posts"][0]["comments"]), 0)
         # Test that there is a list of comments
-        self.assertEqual(response.data["post"]["next"],
+        self.assertEqual(response.data["posts"][0]["next"],
                          'http://testserver' + url + '/comments')
 
     def test_get_private(self):
@@ -252,12 +249,12 @@ class PostDetailView(APITestCase):
         self.client.force_authenticate(user=self.node_author)
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["post"]["title"], self.post2.title)
+        self.assertEqual(response.data["posts"][0]["title"], self.post2.title)
         # We should also be able to see the post when authenticated as a user
         self.client.force_authenticate(user=self.foreignAuthor)
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["post"]["title"], self.post2.title)
+        self.assertEqual(response.data["posts"][0]["title"], self.post2.title)
 
     def test_post_to_existing_uri(self):
         # This should fail
@@ -481,7 +478,7 @@ class CommentList(APITestCase):
         self.post_author = self.testAuthor
         self.post_categories = "first,second"
         self.post_published = datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.post_visibility = "PUBLIC"
         self.post_visibleTo = ""
         self.post_unlisted = False
@@ -496,7 +493,7 @@ class CommentList(APITestCase):
         self.comment1_id = uuid.UUID("de305d54-75b4-431b-adb2-eb6b9e546011")
         self.comment1_comment = "This is the first comment"
         self.comment1_published = datetime.datetime(
-            2020, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2020, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.comment1_contentType = "text/plain"
         self.comment1_post_id = self.post
         Comment.objects.create(id=self.comment1_id, comment=self.comment1_comment,
@@ -506,7 +503,7 @@ class CommentList(APITestCase):
         self.comment2_id = uuid.UUID("de305d54-75b4-431b-adb2-eb6b9e546010")
         self.comment2_comment = "This is the second comment"
         self.comment2_published = datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton'))
         self.comment2_contentType = "text/plain"
         self.comment2_post_id = self.post
         Comment.objects.create(id=self.comment2_id, comment=self.comment2_comment,
@@ -526,8 +523,6 @@ class CommentList(APITestCase):
         # Test that each element of a given content is equal to what we inputted
         self.assertEqual(response.data["comments"]
                          [0]["id"], self.comment1_id_string)
-        self.assertEqual(response.data["comments"]
-                         [0]["published"], self.comment1_published.strftime('%Y-%m-%dT%H:%M:%S%z'))
         self.assertEqual(response.data["comments"][0]
                          ["contentType"], self.comment1_contentType)
         self.assertEqual(response.data["comments"]
@@ -658,42 +653,42 @@ class AuthUserPosts(APITestCase):
         self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source=settings.FORMATTED_HOST_NAME,
                                          origin=settings.FORMATTED_HOST_NAME, description="This is the first post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Second post will be a private post written by author 1, shared with author 2 and the foreign author
         self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source=settings.FORMATTED_HOST_NAME,
                                          origin=settings.FORMATTED_HOST_NAME, description="This is the second post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=str(self.author2.id) + ',' + str(self.foreignAuthor.id), unlisted=False)
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PRIVATE", visibleTo=str(self.author2.id) + ',' + str(self.foreignAuthor.id), unlisted=False)
 
         # Third post will be a public post written by author 2
         self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://thirdpost.com/origin", description="This is the third post",
                                          author=self.author2, categories="", published=datetime.datetime(
-            2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+            2017, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Fourth post will be a private post written by author 1, but NOT shared with author 2
         self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PRIVATE", visibleTo="", unlisted=False)
 
         # Fifth post will be a post set to serveronly visibility by author 1. Only authors 1 and 2 should be able to see it.
         self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="SERVERONLY", visibleTo="", unlisted=False)
 
         # Sixth post will be a post set to friend-only visibility by author1. Author 1 and 2 should be able to see it.
         self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="FRIENDS", visibleTo="", unlisted=False)
         # Seventh post will be a FOAF post by author1. Everyone should be able to see it.
         self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="FOAF", visibleTo="", unlisted=False)
 
     def test_get_list_as_user(self):
         url = reverse('auth-posts')
@@ -745,40 +740,40 @@ class AuthorPosts(APITestCase):
         self.post1 = Post.objects.create(id=uuid.uuid4().hex, title="First Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://firstpost.com/origin", description="This is the first post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2019, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+            2019, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Second post will be a private post written by author 1, shared with author 2 and the foreign author
         self.post2 = Post.objects.create(id=uuid.uuid4().hex, title="Second Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://secondpost.com/origin", description="This is the second post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2018, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo=str(self.author2.id)+','+str(self.foreignAuthor.id), unlisted=False)
+            2018, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PRIVATE", visibleTo=str(self.author2.id)+','+str(self.foreignAuthor.id), unlisted=False)
 
         # Third post will be a public post written by author 2
         self.post3 = Post.objects.create(id=uuid.uuid4().hex, title="Third Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://thirdpost.com/origin", description="This is the third post",
                                          author=self.author2, categories="", published=datetime.datetime(
-            2017, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PUBLIC", visibleTo="", unlisted=False)
+            2017, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PUBLIC", visibleTo="", unlisted=False)
 
         # Fourth post will be a private post written by author 1, but NOT shared with author 2
         self.post4 = Post.objects.create(id=uuid.uuid4().hex, title="Fourth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="PRIVATE", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="PRIVATE", visibleTo="", unlisted=False)
         # Fifth post will be a post written by author1 visible only to friends on the server
         self.post5 = Post.objects.create(id=uuid.uuid4().hex, title="Fifth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="SERVERONLY", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="SERVERONLY", visibleTo="", unlisted=False)
         # Sixth post will be written by author1 visible only to friends
         self.post6 = Post.objects.create(id=uuid.uuid4().hex, title="Sixth Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FRIENDS", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="FRIENDS", visibleTo="", unlisted=False)
         # Seventh post will be written by author1 visible only to FOAF
         self.post7 = Post.objects.create(id=uuid.uuid4().hex, title="Seventh Post", source=settings.FORMATTED_HOST_NAME,
                                          origin="http://fourthpost.com/origin", description="This is the fourth post",
                                          author=self.author1, categories="", published=datetime.datetime(
-            2016, 1, 1, 1, 1, 1, tzinfo=pytz.UTC), visibility="FOAF", visibleTo="", unlisted=False)
+            2016, 1, 1, 1, 1, 1, tzinfo=pytz.timezone('America/Edmonton')), visibility="FOAF", visibleTo="", unlisted=False)
 
     def test_get_list(self):
         author_uuid_blurb = self.author1.id[29:]
