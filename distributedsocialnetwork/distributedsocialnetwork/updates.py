@@ -24,7 +24,7 @@ def get_all_visible_posts():
 
 def get_all_github_activity():
     # Get the github activity for all our local authors.
-    for author in Author.objects.all.filter(origin__icontains=settings.FORMATTED_HOST_NAME):
+    for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
         get_github_activity(author_id=author.id)
 
 def update_detailed_posts():
