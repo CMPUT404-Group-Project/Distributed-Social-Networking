@@ -2,6 +2,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth import authenticate
 from django import forms
 from .models import Author
+import re
 
 
 class AuthorCreationForm(UserCreationForm):
@@ -13,7 +14,7 @@ class AuthorCreationForm(UserCreationForm):
         max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
         max_length=150, help_text="Enter your last name.", required=False)
-    github = forms.CharField(
+    github = forms.URLField(
         max_length=255, help_text="Enter your GitHub profile url.", required=False)
 
     class Meta(UserCreationForm):
@@ -21,13 +22,20 @@ class AuthorCreationForm(UserCreationForm):
         fields = ('displayName', 'email', 'first_name',
                   'last_name', 'github', 'password1', 'password2')
 
+    def clean(self):
+        if self.is_valid():
+            if(self.cleaned_data['github'] != ''):
+                github_url = self.cleaned_data['github']
+                if (not validateGithub(github_url)):
+                    raise forms.ValidationError("Not a valid Github url")
+
 
 class AuthorChangeForm(UserChangeForm):
     first_name = forms.CharField(
         max_length=30, help_text="Enter your first name.", required=False)
     last_name = forms.CharField(
         max_length=150, help_text="Enter your last name.", required=False)
-    github = forms.CharField(
+    github = forms.URLField(
         max_length=255, help_text="Enter your GitHub profile url.", required=False)
     bio = forms.CharField(
         max_length=160, help_text="Enter a short bio.", required=False)
@@ -36,6 +44,13 @@ class AuthorChangeForm(UserChangeForm):
     class Meta(UserChangeForm):
         model = Author
         fields = ('first_name', 'last_name', 'github', 'bio')
+
+    def clean(self):
+        if self.is_valid():
+            if(self.cleaned_data['github'] != ''):
+                github_url = self.cleaned_data['github']
+                if (not validateGithub(github_url)):
+                    raise forms.ValidationError("Not a valid Github url")
 
 
 class AuthorAuthenticationForm(forms.ModelForm):
@@ -59,3 +74,12 @@ class AuthorAuthenticationForm(forms.ModelForm):
             else:
                 raise forms.ValidationError(
                     "Username or password is incorrect.")
+
+
+def validateGithub(url):
+    x = re.findall(
+        "http(s)?:\/\/(www\.)?github\.com\/[A-z0-9_-]+\/?", url)
+    if (len(x) == 1):
+        return True
+    else:
+        return False

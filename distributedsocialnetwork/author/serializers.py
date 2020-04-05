@@ -13,7 +13,7 @@ class AuthorSerializer(ModelSerializer):
     id = serializers.CharField(max_length=100)
     host = serializers.CharField(max_length=100)
     url = serializers.CharField(max_length=100)
-    github = serializers.CharField(
+    github = serializers.URLField(
         max_length=255, required=False, allow_blank=True)
     firstName = serializers.CharField(
         max_length=30, required=False, allow_blank=True, source='first_name')

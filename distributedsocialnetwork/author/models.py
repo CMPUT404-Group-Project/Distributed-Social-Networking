@@ -65,7 +65,7 @@ class Author(AbstractBaseUser):
         max_length=100, editable=False)
     url = models.CharField(max_length=100, editable=False)
     displayName = models.CharField(max_length=150, blank=False, unique=True)
-    github = models.CharField(max_length=255, default="", blank=True)
+    github = models.URLField(max_length=255, default="", blank=True)
     first_name = models.CharField(max_length=30, default="", blank=True)
     last_name = models.CharField(max_length=150, default="", blank=True)
     email = models.EmailField(

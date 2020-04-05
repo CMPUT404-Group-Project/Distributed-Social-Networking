@@ -6,7 +6,7 @@ from schedule import Scheduler
 import threading
 import time
 from post.retrieval import get_public_posts, get_detailed_post
-from author.retrieval import get_detailed_author, get_visible_posts
+from author.retrieval import get_detailed_author, get_visible_posts, get_github_activity
 from friend.retrieval import update_friends_list
 from author.models import Author
 from post.models import Post
@@ -19,8 +19,15 @@ def get_all_public_posts():
 
 def get_all_visible_posts():
     # get_visible_posts will pull in all visible posts for all authors, but we need to supply one author id (doesn't matter who)
-    author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
-    get_visible_posts(author.id)
+    if len(Author.objects.filter(host=settings.FORMATTED_HOST_NAME)) != 0:
+        author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
+        get_visible_posts(author.id)
+
+
+def get_all_github_activity():
+    # Get the github activity for all our local authors.
+    for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
+        get_github_activity(author_id=author.id)
 
 
 def update_detailed_posts():
@@ -29,19 +36,26 @@ def update_detailed_posts():
 
 
 def update_all_foreign_authors():
-    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME):
-        get_detailed_author(author.id)
+    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME, is_node=False):
         update_friends_list(author.id)
+        get_detailed_author(author.id)
 
 
 def get_updates():
-    # print("Getting Visible Posts\n======")
-    get_all_visible_posts()
-    update_detailed_posts()
-    # print("Getting Public Posts\n======")
-    get_all_public_posts()
-    # print("Updating Foreign Authors\n======")
+    print("====== Updating Foreign Authors ======")
     update_all_foreign_authors()
+    print('++++++ Foreign Author Update Complete ++++++')
+    print("====== Pulling GitHub Activity ======")
+    get_all_github_activity()
+    print('++++++ GitHub Pull Complete ++++++')
+    print("====== Getting Visible Posts ======")
+    get_all_visible_posts()
+    print('++++++ Visible Posts Pull Complete ++++++')
+    print("====== Updating Foreign Posts ======")
+    update_detailed_posts()
+    print('++++++ Foreign Post Update Complete ++++++')
+    # get_all_public_posts()
+    # print("Updating Foreign Authors\n======")
 
 
 def run_continuously(self, interval=1):

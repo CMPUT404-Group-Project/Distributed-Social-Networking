@@ -19,7 +19,6 @@ def create_post(request):
     user = request.user
     if not user.is_authenticated:
         return redirect(reverse_lazy('login'))
-
     if request.POST:
         form = PostCreationForm(request.POST)
         if form.is_valid():
@@ -40,6 +39,10 @@ def create_post(request):
         form = PostCreationForm()
 
     context['postCreationForm'] = form
+    # Let's provide all the user's image posts as context, so that they can see them and link to them easily.
+    image_posts = Post.objects.filter(author=request.user, contentType__in=[
+                                      'image/png;base64', 'image/jpeg;base64'])
+    context["images"] = image_posts
     return render(request, 'create.html', context)
 
 
@@ -152,6 +155,10 @@ def edit_post(request, pk):
 
     else:
         form = PostCreationForm(instance=post)
+    # Let's provide all the user's image posts as context, so that they can see them and link to them easily.
+    image_posts = Post.objects.filter(author=request.user, contentType__in=[
+                                      'image/png;base64', 'image/jpeg;base64'])
+    context["images"] = image_posts
 
     context['postCreationForm'] = form
     return render(request, 'edit_post.html', context)
