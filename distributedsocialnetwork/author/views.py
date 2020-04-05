@@ -6,7 +6,7 @@ from django.http import HttpResponseNotFound
 
 from .forms import AuthorCreationForm, AuthorChangeForm, AuthorAuthenticationForm
 from .models import Author
-from .retrieval import get_detailed_author, get_github_activity
+from .retrieval import get_detailed_author
 from post.models import Post
 from friend.models import Friend, Follower
 from distributedsocialnetwork.views import source_convert
@@ -107,8 +107,6 @@ def view_author(request, pk):
     # author = get_object_or_404(Author, id__icontains=pk)
     author = get_object_or_404(Author, url__contains=pk)
     get_detailed_author(author_id=author.id)
-    # For Testing. Remove me!
-    get_github_activity(author_id=author.id)
     context['author'] = author
     if request.method == "GET":
         context["friendrequest"] = "DISABLED"
