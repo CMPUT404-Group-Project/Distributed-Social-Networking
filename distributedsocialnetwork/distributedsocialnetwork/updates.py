@@ -18,27 +18,35 @@ def get_all_public_posts():
 
 
 def get_all_visible_posts():
+    print(">>>>>> Getting Visible Posts")
     # get_visible_posts will pull in all visible posts for all authors, but we need to supply one author id (doesn't matter who)
     if len(Author.objects.filter(host=settings.FORMATTED_HOST_NAME)) != 0:
         author = Author.objects.filter(host=settings.FORMATTED_HOST_NAME)[0]
         get_visible_posts(author.id)
+    print('<<<<<< Visible Posts Pull Complete')
 
 
 def get_all_github_activity():
     # Get the github activity for all our local authors.
+    print(">>>>>> Pulling GitHub Activity")
     for author in Author.objects.filter(host=settings.FORMATTED_HOST_NAME):
         get_github_activity(author_id=author.id)
+    print('<<<<<< GitHub Pull Complete')
 
 
 def update_detailed_posts():
+    print(">>>>>> Updating Foreign Posts")
     for post in Post.objects.all().exclude(origin__icontains=settings.FORMATTED_HOST_NAME):
         get_detailed_post(post.id)
+    print('<<<<<< Foreign Post Update Complete')
 
 
 def update_all_foreign_authors():
+    print(">>>>>> Updating Foreign Authors")
     for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME, is_node=False):
         update_friends_list(author.id)
         get_detailed_author(author.id)
+    print('<<<<<< Foreign Author Update Complete')
 
 
 def get_updates():
@@ -89,7 +97,25 @@ def run_continuously(self, interval=1):
 Scheduler.run_continuously = run_continuously
 
 
-def start_scheduler():
+def foreignauthors_scheduler():
     scheduler = Scheduler()
-    scheduler.every(30).seconds.do(get_updates)
+    scheduler.every(30).seconds.do(update_all_foreign_authors)
+    scheduler.run_continuously()
+
+
+def github_scheduler():
+    scheduler = Scheduler()
+    scheduler.every(30).seconds.do(get_all_github_activity)
+    scheduler.run_continuously()
+
+
+def visibleposts_scheduler():
+    scheduler = Scheduler()
+    scheduler.every(30).seconds.do(get_all_visible_posts)
+    scheduler.run_continuously()
+
+
+def detailedposts_scheduler():
+    scheduler = Scheduler()
+    scheduler.every(30).seconds.do(update_detailed_posts)
     scheduler.run_continuously()
