@@ -1,5 +1,16 @@
 {% extends 'base.html' %} 
-
+{% block stylesheet %}
+<style>
+  .markdown-content{
+    --primary-color: black;
+    --accent-color: black;
+}
+  img{
+  max-width: 200px;
+  max-height: 200px;
+}
+</style> 
+{% endblock %}
 {% block title %} New Post {% endblock %} 
 
 {% block content %}
@@ -39,7 +50,24 @@
     </form>
   </div>
   <div class="col text-right sidebar bg-light">
-    <!-- Right sidebar (no content) -->
+    <!-- Right sidebar, storing images -->
+    <div id="images-container">
+      {% if images.count != 0 %}
+      <h3 style="text-align: center;">Your Images</h3>
+      <h4 style="text-align: center;">Click to Embed</h4>
+      {% endif %}
+      {% for image in images %}
+      <button class="card m-2 post" onclick="embedImage('{{image.source}}', '{{image.title}}')">
+        <div class="card-body">
+          {% if image.contentType == 'image/jpeg;base64' %}
+          <div class="card-text"><img src="data:image/jpeg;base64,{{ image.content }}"></div>
+          {% elif image.contentType == 'image/png;base64' %}
+          <div class="card-text"><img src="data:image/png;base64,{{ image.content }}"></div>
+          {% endif %}
+        </div>
+      </button>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -48,13 +76,24 @@
 <script>
   // Disabling the visibleTo field if it's not needed
   // Thanks to user Praveen Kumar Purushothaman answering user french_dev's question on StackOverflow: https://stackoverflow.com/a/30867314
-  document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
+  if(document.getElementById("id_contentType").value !== 'text/markdown'){
+    document.getElementById("images-container").setAttribute("hidden", "hidden");
+  }
   document.getElementById("id_visibility").onchange = function () {
     document.getElementById("id_visibleTo").setAttribute("disabled", "disabled");
     if (this.value == 'PRIVATE'){
       document.getElementById("id_visibleTo").removeAttribute("disabled");
     }
   };
+
+  // Disabling the images unless the style is markdown
+  document.getElementById("images-container").setAttribute("hidden", "hidden");
+  document.getElementById("id_contentType").onchange = function(){
+    document.getElementById("images-container").setAttribute("hidden", "hidden");
+    if (this.value == 'text/markdown'){
+      document.getElementById("images-container").removeAttribute("hidden");
+    }
+  }
 
   //Thanks to user Roko C. Buljan answering user bombastic's question on StackOverflow: https://stackoverflow.com/a/17711190
   function readFile() {
@@ -102,6 +141,12 @@
       $("#id_image").hide();
     }
   };
+  
+  function embedImage(source, title){
+    // Embeds the image into the content field
+    var contentfield = document.getElementById("id_content");
+    contentfield.textContent += "![" + title + '](' + source + ') ';
+  }
 
   window.onload = function () {
     create_file_uploader();
