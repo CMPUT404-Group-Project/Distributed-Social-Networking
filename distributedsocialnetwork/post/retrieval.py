@@ -382,7 +382,15 @@ def post_foreign_comment(new_comment):
     try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'})
-        print(response)
+        if response.status_code == 500:
+            # We should try again with a backslash
+            try:
+                url = url + '/'
+                response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                    'content-type': 'application/json', 'Accept': 'application/json'})
+            except Exception as e:
+                print(e)
+                response = None
     except Exception as e:
         print("Sending comment to", url)
         # Failed.
