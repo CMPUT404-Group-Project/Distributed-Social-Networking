@@ -541,11 +541,11 @@ class GetImage(APIView):
                 # It is an image, at least.
                 if post.visibility == "PUBLIC":
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "PRIVATE" and user.id in post.visibleTo:
+                if post.visibility == "PRIVATE" and (user.id in post.visibleTo or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FRIENDS" and Friend.objects.are_friends(user, post.author):
+                if post.visibility == "FRIENDS" and (Friend.objects.are_friends(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FOAF" and Friend.objects.are_foaf(user, post.author):
+                if post.visibility == "FOAF" and (Friend.objects.are_foaf(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
