@@ -238,6 +238,10 @@ def get_detailed_post(post_id):
                 # If 'post' is not in there, then the data is likely sent without being wrapped
                 post_json['post'] = post_json
             if 'posts' in post_json.keys():
+                # We have to add an exception here if this list is empty. Group 4 is doing some weird stuff.
+                if len(post_json["posts"]) == 0:
+                    # We have no post to update from.
+                    return local_copy
                 post_json["post"] = post_json["posts"][0]
                 del post_json["posts"]
             post_data = post_json['post']
