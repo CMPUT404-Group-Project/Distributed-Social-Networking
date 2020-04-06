@@ -14,7 +14,8 @@ class MainappConfig(AppConfig):
 
         if os.environ.get('RUN_MAIN', None) != 'true':
             # What if we run each scheduler in a different thread?
-            updates.foreignauthors_scheduler()
-            updates.github_scheduler()
-            updates.visibleposts_scheduler()
-            updates.detailedposts_scheduler()
+            # updates.foreignauthors_scheduler()
+            # updates.github_scheduler()
+            # updates.visibleposts_scheduler()
+            # updates.detailedposts_scheduler()
+            updates.all_updates_scheduler()

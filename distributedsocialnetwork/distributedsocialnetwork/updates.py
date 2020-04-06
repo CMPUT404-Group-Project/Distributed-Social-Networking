@@ -50,18 +50,10 @@ def update_all_foreign_authors():
 
 
 def get_updates():
-    print("====== Updating Foreign Authors ======")
     update_all_foreign_authors()
-    print('++++++ Foreign Author Update Complete ++++++')
-    print("====== Pulling GitHub Activity ======")
     get_all_github_activity()
-    print('++++++ GitHub Pull Complete ++++++')
-    print("====== Getting Visible Posts ======")
     get_all_visible_posts()
-    print('++++++ Visible Posts Pull Complete ++++++')
-    print("====== Updating Foreign Posts ======")
     update_detailed_posts()
-    print('++++++ Foreign Post Update Complete ++++++')
     # get_all_public_posts()
     # print("Updating Foreign Authors\n======")
 
@@ -95,6 +87,13 @@ def run_continuously(self, interval=1):
 
 
 Scheduler.run_continuously = run_continuously
+
+
+def all_updates_scheduler():
+    # Running them all in one thread again
+    scheduler = Scheduler()
+    scheduler.every(30).seconds.do(get_updates)
+    scheduler.run_continuously()
 
 
 def foreignauthors_scheduler():
