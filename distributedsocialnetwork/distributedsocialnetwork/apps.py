@@ -13,4 +13,8 @@ class MainappConfig(AppConfig):
         from . import updates
 
         if os.environ.get('RUN_MAIN', None) != 'true':
-            updates.start_scheduler()
+            # What if we run each scheduler in a different thread?
+            updates.foreignauthors_scheduler()
+            updates.github_scheduler()
+            updates.visibleposts_scheduler()
+            updates.detailedposts_scheduler()
