@@ -43,7 +43,8 @@ def update_detailed_posts():
 
 def update_all_foreign_authors():
     print(">>>>>> Updating Foreign Authors")
-    for author in Author.objects.all().exclude(host=settings.FORMATTED_HOST_NAME, is_node=False):
+    for author in Author.objects.filter(is_node=False).exclude(host=settings.FORMATTED_HOST_NAME):
+        print(author.id)
         update_friends_list(author.id)
         get_detailed_author(author.id)
     print('<<<<<< Foreign Author Update Complete')
