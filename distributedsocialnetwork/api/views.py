@@ -162,7 +162,7 @@ class ForeignPosts(APIView):
     # Returned as HTML for simple front-end integration.
     def get(self, request):
         posts = Post.objects.filter(visibility="PUBLIC", unlisted=False).exclude(
-            origin__icontains=settings.FORMATTED_HOST_NAME)[:10]
+            origin__icontains=settings.FORMATTED_HOST_NAME)
         context = {}
         context["posts"] = source_convert(posts)
         return render(request, 'stream.html', context)
@@ -572,7 +572,6 @@ class GetImage(APIView):
                         post_json['post'] = post_json
                     if 'posts' in post_json.keys():
                         # For some reason, they can return an empty list here
-                        print(len(post_json["posts"]))
                         if len(post_json["posts"]) == 0:
                             return Response({"content": placeholder}, status=status.HTTP_200_OK)
                         post_json["post"] = post_json["posts"][0]

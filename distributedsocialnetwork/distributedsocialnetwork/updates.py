@@ -92,7 +92,7 @@ Scheduler.run_continuously = run_continuously
 def all_updates_scheduler():
     # Running them all in one thread again
     scheduler = Scheduler()
-    scheduler.every(30).seconds.do(get_updates)
+    scheduler.every().minute.do(get_updates)
     scheduler.run_continuously()
 
 
