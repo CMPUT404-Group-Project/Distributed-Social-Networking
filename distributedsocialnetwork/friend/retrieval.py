@@ -53,6 +53,9 @@ def send_friend_request(author_id, friend_id):
                 'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
         except:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if response.status_code == 200 or response.status_code == 201:
+        # If it succeeded, we should immediately pull their friends list to make sure it is updated
+        update_friends_list(friend_id)
     return response
 
 
