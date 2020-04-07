@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404
 
 # Given a QuerySet 'posts', returns another QuerySet
 # containing the posts that 'author_id' can see.
+GLOBAL_TIMEOUT = 10
 
 
 def filter_posts(posts, author_id):
@@ -45,7 +46,7 @@ def get_visible_posts(author_id):
             url = node.api_url + 'author/posts'
             try:
                 response = requests.get(
-                    url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=5)
+                    url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
             except Timeout:
                 print("Request to", url, "timed out")
                 return filter_posts(visible_posts, author_id)
@@ -141,7 +142,7 @@ def get_detailed_author(author_id):
             try:
                 response = requests.get(url, auth=(
                     node.node_auth_username, node.node_auth_password), headers={
-                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=5)
+                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
             except Timeout:
                 print("Request to", url, "timed out")
             if response.status_code == 404:
@@ -219,7 +220,7 @@ def get_github_activity(author_id):
         url = f"https://api.github.com/users/{githubUsername}/received_events/public"
         try:
             response = requests.get(
-                url, headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=5)
+                url, headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
         except Timeout:
             return
         if response.status_code == 200:
