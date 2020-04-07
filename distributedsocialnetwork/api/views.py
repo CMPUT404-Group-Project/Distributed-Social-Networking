@@ -17,7 +17,7 @@ from distributedsocialnetwork.views import url_convert, source_convert
 import uuid
 import requests
 from requests.exceptions import Timeout
-from post.retrieval import sanitize_post, sanitize_author
+from post.retrieval import sanitize_post, sanitize_author, transformSource
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
@@ -162,7 +162,7 @@ class ForeignPosts(APIView):
     # Returned as HTML for simple front-end integration.
     def get(self, request):
         posts = Post.objects.filter(visibility="PUBLIC", unlisted=False).exclude(
-            origin__icontains=settings.FORMATTED_HOST_NAME)
+            origin__icontains=settings.FORMATTED_HOST_NAME)[:10]
         context = {}
         context["posts"] = source_convert(posts)
         return render(request, 'stream.html', context)
@@ -526,6 +526,7 @@ class PostDetailView(APIView):
 
 class GetImage(APIView):
     def post(self, request):
+
         # A post sends a body which is just a dict with the image link in it.
         # Should return the base64 string to embed if the user is able to see it.
         # Else, return a placeholder explaining that they can't see it.
@@ -570,6 +571,10 @@ class GetImage(APIView):
                         # If 'post' is not in there, then the data is likely sent without being wrapped
                         post_json['post'] = post_json
                     if 'posts' in post_json.keys():
+                        # For some reason, they can return an empty list here
+                        print(len(post_json["posts"]))
+                        if len(post_json["posts"]) == 0:
+                            return Response({"content": placeholder}, status=status.HTTP_200_OK)
                         post_json["post"] = post_json["posts"][0]
                         del post_json["posts"]
                     post_data = post_json['post']
@@ -577,7 +582,15 @@ class GetImage(APIView):
                         post_data = post_data[0]
                     # We have to sanitize the post, and the author of the post
                     post_data["author"] = sanitize_author(post_data["author"])
+                    post_data = transformSource(post_data)
                     post = sanitize_post(post_data)
+                    # # We should also be saving this post, so we can do this faster next time.
+                    # post_serializer = PostSerializer(data=post)
+                    # if post_serializer.is_valid():
+                    #     try:
+                    #         post_serializer.save()
+                    #     except Exception as e:
+                    #         print("Could not cache image", e)
                     # And now we have to check to see if we can actually see this post
                     if post["visibility"] == "PUBLIC":
                         return Response({"content": post["content"]}, status=status.HTTP_200_OK)
@@ -607,6 +620,8 @@ class GetImage(APIView):
                         return Response({"content": placeholder}, status=status.HTTP_200_OK)
                     else:
                         return Response({"content": placeholder}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"content": placeholder}, status=status.HTTP_200_OK)
             except:
                 return Response({"content": placeholder}, status=status.HTTP_200_OK)
 
