@@ -1,4 +1,5 @@
 import requests
+from requests.exceptions import Timeout
 from node.models import Node
 from post.serializers import PostSerializer, CommentSerializer
 from author.serializers import AuthorSerializer
@@ -13,6 +14,7 @@ from author.models import Author
 
 # The purpose of this is to provide functions that can import Posts from the other Nodes.
 # Each Node may not be completely to spec, so we may have to add server-specific compatibility here and there.
+GLOBAL_TIMEOUT = 10
 
 
 def sanitize_author(obj):
@@ -136,7 +138,7 @@ def get_public_posts():
             #     url, auth=(
             #         node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
             response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
@@ -224,9 +226,13 @@ def get_detailed_post(post_id):
             return local_copy
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'posts/' + local_split[-1]
-        response = requests.get(
-            url, auth=(
-                node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        try:
+            response = requests.get(
+                url, auth=(
+                    node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+        except Timeout:
+            print("Request to", url, "timed out")
+            return None
         if response.status_code == 404:
             # The post is gone!
             Post.objects.get(id=post_id).delete()
@@ -288,8 +294,12 @@ def get_comments(pk):
             return Comment.objects.filter(post_id=pk)
         node = Node.objects.get(hostname__contains=local_split[2])
         url = node.api_url + 'posts/' + local_split[-1] + '/comments'
-        response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
-                                headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        try:
+            response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
+                                    headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+        except Timeout:
+            print("Request to", url, "timed out")
+            return Comment.objects.filter(post_id=pk)
         if response.status_code == 200:
             comments_json = response.json()
             for comment in comments_json["comments"]:
@@ -378,16 +388,30 @@ def post_foreign_comment(new_comment):
     node = Node.objects.get(hostname__icontains=post.origin.split('/')[2])
     # url = node.api_url + 'posts/' + str(post.id) + '/' + 'comments'
     url = post.origin + '/comments'
+    print("Sending comment to", url)
     try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-            'content-type': 'application/json', 'Accept': 'application/json'})
-        if response.status_code != 201:
-            # Let us try again for the response, with a backslash
+            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+        if response.status_code == 500:
+            # We should try again with a backslash
+            print("sending comment to", url)
+            try:
+                url = url + '/'
+                response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
+                    'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+            except Exception as e:
+                print(e)
+                response = None
+    except Exception as e:
+        print("Sending comment to", url)
+        # Failed.
+        # Let us try again for the response, with a backslash
+        try:
             url = url + '/'
             response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                'content-type': 'application/json', 'Accept': 'application/json'})
-    except Exception as e:
-        print(e)
-        response = None
+                'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+        except Exception as e:
+            print(e)
+            response = None
 
     return response

@@ -6,6 +6,7 @@ from post.retrieval import sanitize_author, sanitize_post, transformSource
 from friend.models import Friend
 from author.serializers import AuthorSerializer
 import requests
+from requests.exceptions import Timeout
 import datetime
 import uuid
 import re
@@ -14,6 +15,7 @@ from django.shortcuts import get_object_or_404
 
 # Given a QuerySet 'posts', returns another QuerySet
 # containing the posts that 'author_id' can see.
+GLOBAL_TIMEOUT = 10
 
 
 def filter_posts(posts, author_id):
@@ -42,12 +44,12 @@ def get_visible_posts(author_id):
             # We have a set username and password to authenticate with this node.
             # We send a GET request to their endpoint.
             url = node.api_url + 'author/posts'
-            # print("sending to ", url)
-            # Include a header containing the Author's id, other nodes may not conform to this.
-            # response = requests.get(
-            #     url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json', 'AuthorId': author.id})
-            response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
+            try:
+                response = requests.get(
+                    url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+            except Timeout:
+                print("Request to", url, "timed out")
+                return filter_posts(visible_posts, author_id)
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
@@ -137,9 +139,12 @@ def get_detailed_author(author_id):
             # We have to convert the url to contain a UUID if it otherwise wont
             url = node.api_url + 'author/' + local_split[-1]
             # print('sending to', url)
-            response = requests.get(url, auth=(
-                node.node_auth_username, node.node_auth_password), headers={
-                'content-type': 'appliation/json', 'Accept': 'application/json'})
+            try:
+                response = requests.get(url, auth=(
+                    node.node_auth_username, node.node_auth_password), headers={
+                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+            except Timeout:
+                print("Request to", url, "timed out")
             if response.status_code == 404:
                 # The author has been deleted!
                 Author.objects.filter(id=author_id).delete()
@@ -205,14 +210,19 @@ def get_detailed_author(author_id):
 # Creates private posts for every new github
 # event, as authors should only be able to
 # see their own github activity stream.
+
+
 def get_github_activity(author_id):
     author = get_object_or_404(Author, id=author_id)
     # If the author has set a github profile URL
     if author.github:
         githubUsername = author.github.rsplit('/', 1)[-1]
         url = f"https://api.github.com/users/{githubUsername}/received_events/public"
-        response = requests.get(
-                url, headers={'content-type': 'application/json', 'Accept': 'application/json'})
+        try:
+            response = requests.get(
+                url, headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+        except Timeout:
+            return
         if response.status_code == 200:
             response_json = response.json()
             for event in response_json:
@@ -224,7 +234,8 @@ def get_github_activity(author_id):
                     continue
                 try:
                     # Split up the event type with spaces.
-                    title = "Github " + re.sub( r"([A-Z])", r" \1", event["type"])
+                    title = "Github " + \
+                        re.sub(r"([A-Z])", r" \1", event["type"])
                     content = parse_github_event(event)
                     published = datetime.datetime.strptime(
                         event["created_at"], '%Y-%m-%dT%H:%M:%SZ')
@@ -236,7 +247,7 @@ def get_github_activity(author_id):
                         author=author,
                         categories='github',
                         published=published,
-                        visibility= 'PRIVATE'
+                        visibility='PRIVATE'
                     )
                     post.origin = origin
                     post.source = settings.FORMATTED_HOST_NAME + \
@@ -244,30 +255,32 @@ def get_github_activity(author_id):
                     post.save()
                 except:
                     print("Failed to import github event!")
-                    
+
+
 def parse_github_event(event):
     event_type = event["type"]
     actor_login = event["actor"]["login"]
-    actor_url = event["actor"]["url"].replace("api.github.com/users","github.com")
+    actor_url = event["actor"]["url"].replace(
+        "api.github.com/users", "github.com")
     payload = event["payload"]
     repo = event["repo"]
     repo_name = repo["name"]
-    repo_url = repo["url"].replace("api.github.com/repos","github.com")
-    if event_type=='CreateEvent':
+    repo_url = repo["url"].replace("api.github.com/repos", "github.com")
+    if event_type == 'CreateEvent':
         ref = payload["ref"]
         ref_type = payload["ref_type"]
         return (
             f"<p><a href=\"{actor_url}\">{actor_login}</a> created "
             f"{ref_type} {ref} in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
         )
-    elif event_type=='DeleteEvent':
+    elif event_type == 'DeleteEvent':
         ref = payload["ref"]
         ref_type = payload["ref_type"]
         return (
             f"<p><a href=\"{actor_url}\">{actor_login}</a> deleted "
             f"{ref_type} {ref} in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
         )
-    elif event_type=='IssuesEvent':
+    elif event_type == 'IssuesEvent':
         action = payload["action"]
         issue_url = payload["issue"]["html_url"]
         issue_num = payload["issue"]["number"]
@@ -278,7 +291,7 @@ def parse_github_event(event):
             f"<p><a href=\"{actor_url}\">{actor_login}</a> {action} "
             f"<a href=\"{issue_url}\">Issue #{issue_num}</a>{extra}</p>"
         )
-    elif event_type=='IssueCommentEvent':
+    elif event_type == 'IssueCommentEvent':
         action = payload["action"]
         issue_url = payload["issue"]["html_url"]
         issue_num = payload["issue"]["number"]
@@ -289,7 +302,7 @@ def parse_github_event(event):
             f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
             f"<p>{comment_body}</p>"
         )
-    elif event_type=='PullRequestEvent':
+    elif event_type == 'PullRequestEvent':
         action = payload["action"]
         pr_num = payload["number"]
         pr = payload["pull_request"]
@@ -315,7 +328,7 @@ def parse_github_event(event):
             f"<a href=\"{pr_url}\">Pull Request #{pr_num}</a>{extra} "
             f"in repository <a href=\"{repo_url}\">{repo_name}</a></p>"
         )
-    elif event_type=='PushEvent':
+    elif event_type == 'PushEvent':
         ref = payload["ref"]
         return (
             f"<p><a href=\"{actor_url}\">{actor_login}</a> pushed to "

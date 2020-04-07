@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 import requests
+from requests.exceptions import Timeout
+
+GLOBAL_TIMEOUT = 10
 
 
 def send_friend_request(author_id, friend_id):
@@ -41,13 +44,13 @@ def send_friend_request(author_id, friend_id):
     # And we send it off
     try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-            'content-type': 'application/json', 'Accept': 'application/json'})
+            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
     except:
         # Let us try again for the response, with a backslash
         try:
             url = url + '/'
             response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                'content-type': 'application/json', 'Accept': 'application/json'})
+                'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
         except:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return response
@@ -76,7 +79,10 @@ def update_friends_list(author_id):
     # And so we send the request
     try:
         response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-            'content-type': 'application/json', 'Accept': 'application/json'})
+            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+    except Timeout:
+        print("timeout")
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except:
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if response.status_code == 200 or response.status_code == 201:
