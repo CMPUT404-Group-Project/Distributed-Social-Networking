@@ -16,11 +16,13 @@ from django.conf import settings
 from distributedsocialnetwork.views import url_convert, source_convert
 import uuid
 import requests
+from requests.exceptions import Timeout
 from post.retrieval import sanitize_post, sanitize_author
 # Create your views here.
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
 # involving lists of posts and comments
+GLOBAL_TIMEOUT = 10
 
 
 def post_list_generator(request, query_set):
@@ -195,19 +197,22 @@ class PostDetailView(APIView):
                                     server_username=request.user.displayName)
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
-                                response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
-                                if response.status_code == 200:
-                                    response_data = response.json()
-                                    for friend_id in response_data["authors"]:
-                                        # If they are friends with our author, they should be stored locally
-                                        if len(Author.objects.filter(id=friend_id)) == 1:
-                                            friend = Author.objects.get(
-                                                id=friend_id)
-                                            if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
-                                                # They are FOAF. So we can send it.
-                                                has_allowed_user = True
-
+                                try:
+                                    response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
+                                                            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                                    if response.status_code == 200:
+                                        response_data = response.json()
+                                        for friend_id in response_data["authors"]:
+                                            # If they are friends with our author, they should be stored locally
+                                            if len(Author.objects.filter(id=friend_id)) == 1:
+                                                friend = Author.objects.get(
+                                                    id=friend_id)
+                                                if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
+                                                    # They are FOAF. So we can send it.
+                                                    has_allowed_user = True
+                                except Timeout:
+                                    # Request times out, so we can't send the post
+                                    pass
                             except Exception:
                                 # We can't reach the other server, so we can't in good conscience send this post.
                                 pass
@@ -308,7 +313,7 @@ class PostDetailView(APIView):
                                     'author/')[-1] + '/friends/' + author_id
                             try:
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'})
+                                                        'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     if response_data["friends"]:
@@ -558,7 +563,7 @@ class GetImage(APIView):
                     hostname=post_link.split('posts/')[0])
                 response = requests.get(post_link, auth=(
                     node.node_auth_username, node.node_auth_password), headers={
-                    'content-type': 'appliation/json', 'Accept': 'application/json'})
+                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
                 if response.status_code == 200:
                     post_json = response.json()
                     if 'post' not in post_json.keys():
@@ -587,15 +592,18 @@ class GetImage(APIView):
                         return Response({"content": post["content"]}, status=status.HTTP_200_OK)
                     if post["visibility"] == "FOAF":
                         # We gotta actually query the other server to see if we can see this
-                        friends_response = requests.get(post["author"]["id"] + '/friends', auth=(
-                            node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'})
-                        if friends_response.status_code == 200:
-                            response_json = friends_response.json()
-                            for author in response_json["authors"]:
-                                # A bunch of IDs
-                                if len(Author.objects.filter(id=author)) == 1:
-                                    if Friend.objects.are_friends(user, Author.objects.get(id=author)):
-                                        return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        try:
+                            friends_response = requests.get(post["author"]["id"] + '/friends', auth=(
+                                node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                            if friends_response.status_code == 200:
+                                response_json = friends_response.json()
+                                for author in response_json["authors"]:
+                                    # A bunch of IDs
+                                    if len(Author.objects.filter(id=author)) == 1:
+                                        if Friend.objects.are_friends(user, Author.objects.get(id=author)):
+                                            return Response({"content": post["content"]}, status=status.HTTP_200_OK)
+                        except Timeout:
+                            pass
                         return Response({"content": placeholder}, status=status.HTTP_200_OK)
                     else:
                         return Response({"content": placeholder}, status=status.HTTP_200_OK)
@@ -773,7 +781,7 @@ class AuthUserPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                    'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:
@@ -884,7 +892,7 @@ class AuthorPosts(APIView):
                                 url = node.api_url + 'author/' + \
                                     author.id.split('author/')[-1] + '/friends'
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                    'content-type': 'application/json', 'Accept': 'application/json'})
+                                    'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     for friend_id in response_data["authors"]:

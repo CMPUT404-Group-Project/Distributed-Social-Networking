@@ -81,7 +81,7 @@ def update_friends_list(author_id):
         response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
             'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
     except Timeout:
-        print("timeout")
+        print("timeout sending request to", url)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except:
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
