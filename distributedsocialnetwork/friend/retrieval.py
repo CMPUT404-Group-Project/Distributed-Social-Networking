@@ -53,6 +53,9 @@ def send_friend_request(author_id, friend_id):
                 'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
         except:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if response.status_code == 200 or response.status_code == 201:
+        # If it succeeded, we should immediately pull their friends list to make sure it is updated
+        update_friends_list(friend_id)
     return response
 
 
@@ -66,16 +69,24 @@ def update_friends_list(author_id):
     # We should be sending to the original server
     # To get the url, we strip the id, replace with the api_url, and send that
     try:
-        node = Node.objects.get(hostname=author.host)
+        node = Node.objects.get(hostname__contains=author.host)
     except:
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    api_url = node.api_url
-    url = api_url + 'author/' + author_id.split('author/')[-1]
 
-    if url[-1] == '/':
-        url += 'friends'
+    # So now we have to add speciality code for team 4, because they have a weird abomination of an interpretation of the spec.
+    # We can't just query /friends anymore, that would be too easy. Instead we have to strip the header off and send almost the whole URL.
+    # I argued adamantly that this makes no sense, but they will not be changing it so whatever
+    if 'mandala' in node.hostname:
+        url = author_id
     else:
-        url += '/friends'
+
+        api_url = node.api_url
+        url = api_url + 'author/' + author_id.split('author/')[-1]
+
+        if url[-1] == '/':
+            url += 'friends'
+        else:
+            url += '/friends'
     # And so we send the request
     try:
         response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
@@ -115,6 +126,33 @@ def update_friends_list(author_id):
                         Friend.objects.add_friend(author, friend)
             # Finally, we check to see if they have fewer friends than before.
             for friend_id in list(set(friend_ids) - set(friends_response["authors"])):
+                Friend.objects.remove_friend(Author.objects.get(id=author_id), Author.objects.get(
+                    id=friend_id))
+        elif "friends" in friends_response:
+            # The exact same thing, but mandala makes us use the author page.
+            for friend in friends_response["friends"]:
+                friend_id = friend["id"]
+                if 'http' not in friend_id:
+                    friend_id = 'https://' + friend_id
+                friend_host = author_id.split('author/')[0]
+                if len(Node.objects.filter(hostname=friend_host)) == 1:
+                    stored = True
+                    # We have talked to these people before, so let's do some work
+                    if len(Author.objects.filter(id=friend_id)) != 1:
+                        # We must add them first
+                        stored = False
+                        if get_detailed_author(author_id=friend_id):
+                            stored = True
+                    if stored:
+                        # We aren't updating them, just adding reference to how they are friends
+                        friend = Author.objects.get(id=friend_id)
+                        Friend.objects.add_friend(author, friend)
+            # Finally, we check to see if they have fewer friends than before.
+            friends = friends_response["friends"]
+            new_ids = []
+            for friend in friends:
+                new_ids.append(friend["id"])
+            for friend_id in list(set(friend_ids) - set(new_ids)):
                 Friend.objects.remove_friend(Author.objects.get(id=author_id), Author.objects.get(
                     id=friend_id))
     return response
