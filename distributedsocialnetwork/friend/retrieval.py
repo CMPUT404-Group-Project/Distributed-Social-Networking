@@ -130,7 +130,8 @@ def update_friends_list(author_id):
                     id=friend_id))
         elif "friends" in friends_response:
             # The exact same thing, but mandala makes us use the author page.
-            for friend_id in friends_response["friends"]:
+            for friend in friends_response["friends"]:
+                friend_id = friend["id"]
                 friend_host = author_id.split('author/')[0]
                 if len(Node.objects.filter(hostname=friend_host)) == 1:
                     stored = True
@@ -145,7 +146,11 @@ def update_friends_list(author_id):
                         friend = Author.objects.get(id=friend_id)
                         Friend.objects.add_friend(author, friend)
             # Finally, we check to see if they have fewer friends than before.
-            for friend_id in list(set(friend_ids) - set(friends_response["authors"])):
+            friends = friends_response["friends"]
+            new_ids = []
+            for friend in friends:
+                new_ids.append(friend["id"])
+            for friend_id in list(set(friend_ids) - set(new_ids)):
                 Friend.objects.remove_friend(Author.objects.get(id=author_id), Author.objects.get(
                     id=friend_id))
     return response
