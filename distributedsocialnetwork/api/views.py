@@ -505,7 +505,7 @@ class GetImage(APIView):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "FRIENDS" and (Friend.objects.are_friends(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FOAF" and (Friend.objects.are_foaf(user, post.author) or user.id == post.author.id):
+                if post.visibility == "FOAF" and (user in Friend.objects.get_foaf(post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
@@ -720,8 +720,7 @@ class AuthUserPosts(APIView):
                 post_query_set = public_posts | user_posts | privated_posts | serveronly_posts | friend_posts | foaf_posts
             else:
                 # ++++++++++++++++++++ A Node is logged in +++++++++++++++++++++++++++++++++++++++++++
-                # We pass over the posts that all of THEIR users can see
-                # We assume that we currently have their users stored in our system.
+                # We pass over all posts originating from our server.
                 hostname = settings.FORMATTED_HOST_NAME
                 public_posts = Post.objects.filter(
                     visibility="PUBLIC", origin__contains=hostname)
@@ -731,45 +730,6 @@ class AuthUserPosts(APIView):
                     visibility="FRIENDS", origin__contains=hostname)
                 foaf_posts = Post.objects.filter(
                     visibility="FOAF", origin__contains=hostname)
-                # possible_hosts = [request.user.host, request.user.host[:-1]]
-                # for author in list(Author.objects.filter(host__in=request.user.host)):
-                #     # For each author belonging to that server, we add the posts they are able to see
-                #     privated_posts = privated_posts | Post.objects.filter(
-                #         visibility="PRIVATE", visibleTo__icontains=author.id, origin__contains=hostname)
-                #     friend_posts = friend_posts | Post.objects.filter(
-                #         visibility="FRIENDS", author__in=Friend.objects.get_friends(author), origin__contains=hostname)
-                #     # Foaf is trickier.
-                #     for post in Post.objects.filter(visibility="FOAF"):
-                #         # If the author is friends with the author of the post, we can send it.
-                #         # If the author is friends with a friend of the author of the post, we can send it.
-                #         if Friend.objects.are_friends(post.author, author):
-                #             foaf_posts = foaf_posts | Post.objects.filter(
-                #                 id=post.id)
-                #         else:
-                #             # We have to query the server to see who their friends are.
-                #             try:
-                #                 node = Node.objects.get(
-                #                     server_username=request.user.displayName)
-                #                 url = node.api_url + 'author/' + \
-                #                     author.id.split('author/')[-1] + '/friends'
-                #                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                #                     'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
-                #                 if response.status_code == 200:
-                #                     response_data = response.json()
-                #                     for friend_id in response_data["authors"]:
-                #                         # If they are friends with our author, they should be stored locally
-                #                         if len(Author.objects.filter(id=friend_id)) == 1:
-                #                             friend = Author.objects.get(
-                #                                 id=friend_id)
-                #                             if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
-                #                                 # They are FOAF. So we can send it.
-                #                                 foaf_posts = foaf_posts | Post.objects.filter(
-                #                                     id=post.id)
-
-                #             except Exception:
-                #                 # We can't reach the other server, so we can't in good conscience send this post.
-                #                 pass
-                # UPDATE PER APRIL 7TH: Servers are root (per Hindle), so we send them everything.
                 post_query_set = public_posts | privated_posts | friend_posts | foaf_posts
         else:
             # They are not logged in and authenticated. So
@@ -842,49 +802,6 @@ class AuthorPosts(APIView):
                     author=author_id, visibility="FRIENDS")
                 foaf_posts = Post.objects.filter(
                     author=author_id, visibility="FOAF")
-                # possible_hosts = [request.user.host, request.user.host[:-1]]
-                # for foreign_author in list(Author.objects.filter(host__in=possible_hosts)):
-                #     # For each author belonging to that server, we add the posts they are able to see
-                #     author_private_posts = author_private_posts | Post.objects.filter(
-                #         visibility="PRIVATE", author=author_id, visibleTo__icontains=foreign_author.id)
-                #     if Friend.objects.are_friends(author, foreign_author):
-                #         friend_posts = friend_posts | Post.objects.filter(
-                #             visibility="FRIENDS", author=author_id)
-                #         foaf_posts = foaf_posts | Post.objects.filter(
-                #             visibility="FOAF", author=author_id)
-                #     # Foaf is trickier.
-                #     for post in Post.objects.filter(visibility="FOAF", author=author_id):
-                #         # If the author is friends with the author of the post, we can send it.
-                #         # If the author is friends with a friend of the author of the post, we can send it.
-                #         if Friend.objects.are_friends(post.author, author):
-                #             foaf_posts = foaf_posts | Post.objects.filter(
-                #                 id=post.id)
-                #         else:
-                #             # We have to query the server to see who their friends are.
-                #             try:
-                #                 node = Node.objects.get(
-                #                     server_username=request.user.displayName)
-                #                 url = node.api_url + 'author/' + \
-                #                     author.id.split('author/')[-1] + '/friends'
-                #                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                #                     'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
-                #                 if response.status_code == 200:
-                #                     response_data = response.json()
-                #                     for friend_id in response_data["authors"]:
-                #                         # If they are friends with our author, they should be stored locally
-                #                         if len(Author.objects.filter(id=friend_id)) == 1:
-                #                             friend = Author.objects.get(
-                #                                 id=friend_id)
-                #                             if Friend.objects.are_friends(friend, get_object_or_404(Author, id=post.author.id)):
-                #                                 # They are FOAF. So we can send it.
-                #                                 foaf_posts = foaf_posts | Post.objects.filter(
-                #                                     id=post.id)
-
-                #             except Exception:
-                #                 # We can't reach the other server, so we can't in good conscience send this post.
-                #                 pass
-                # UPDATE per April 7th, we should return all these posts as servers are root
-
                 post_query_set = author_public_posts | author_private_posts | friend_posts | foaf_posts
 
         else:
