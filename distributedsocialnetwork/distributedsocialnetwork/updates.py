@@ -9,6 +9,7 @@ from post.retrieval import get_public_posts, get_detailed_post
 from author.retrieval import get_detailed_author, get_visible_posts, get_github_activity
 from friend.retrieval import update_friends_list
 from author.models import Author
+from node.models import Node
 from post.models import Post
 from django.conf import settings
 
@@ -34,28 +35,56 @@ def get_all_github_activity():
     print('<<<<<< GitHub Pull Complete')
 
 
-def update_detailed_posts():
-    print(">>>>>> Updating Foreign Posts")
-    for post in Post.objects.all().exclude(origin__icontains=settings.FORMATTED_HOST_NAME):
+def update_detailed_posts(node):
+    print(">>>>>> Updating Foreign Posts from", node.server_username)
+    # For each post originating from this node, we request an update. If they take over 9 seconds to respond
+    # we cancel our updates with that node for now.
+    for post in Post.objects.filter(origin__icontains=node.hostname):
+        start = time.time()
         get_detailed_post(post.id)
-    print('<<<<<< Foreign Post Update Complete')
+        end = time.time()
+        if (end - start) >= 9:
+            print('<<<<<< ENDED Foreign Post Update from', node.server_username)
+            return False
+    print('<<<<<< Foreign Post Update Complete from', node.server_username)
+    return True
 
 
-def update_all_foreign_authors():
-    print(">>>>>> Updating Foreign Authors")
-    for author in Author.objects.filter(is_node=False).exclude(host=settings.FORMATTED_HOST_NAME):
+def update_all_foreign_authors(node):
+    print(">>>>>> Updating Foreign Authors from", node.server_username)
+    # For each author from the node we have stored, we request an update. If they take over 9 seconds
+    # to respond to a single request, we cancel updating from that node
+    possible_hostnames = [node.hostname, node.hostname[:-1]]
+    for author in Author.objects.filter(is_node=False, host__in=possible_hostnames):
+        start = time.time()
         update_friends_list(author.id)
-        get_detailed_author(author.id)
-    print('<<<<<< Foreign Author Update Complete')
+        end = time.time()
+        if (end-start) >= 9:
+            print('<<<<<< ENDED Foreign Author Update from', node.server_username)
+            return False
+        else:
+            start = time.time()
+            get_detailed_author(author.id)
+            end = time.time()
+            if (end-start) >= 9:
+                print('<<<<<< ENDED Foreign Author Update from',
+                      node.server_username)
+                return False
+    print('<<<<<< Foreign Author Update Complete from', node.server_username)
+    return True
 
 
 def get_updates():
-    update_all_foreign_authors()
     get_all_github_activity()
     get_all_visible_posts()
-    update_detailed_posts()
-    # get_all_public_posts()
-    # print("Updating Foreign Authors\n======")
+    for node in Node.objects.all():
+        # We run updates against each node, for authors and posts.
+        # If a single request times out, we do not continue updating from that node.
+        # We can't do this for visible_posts, unfortunately
+        if not update_all_foreign_authors(node):
+            continue
+        if not update_detailed_posts(node):
+            continue
 
 
 def run_continuously(self, interval=1):
@@ -92,7 +121,7 @@ Scheduler.run_continuously = run_continuously
 def all_updates_scheduler():
     # Running them all in one thread again
     scheduler = Scheduler()
-    scheduler.every().minute.do(get_updates)
+    scheduler.every(30).seconds.do(get_updates)
     scheduler.run_continuously()
 
 

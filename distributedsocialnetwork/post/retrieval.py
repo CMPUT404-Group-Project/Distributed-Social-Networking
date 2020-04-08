@@ -247,7 +247,9 @@ def get_detailed_post(post_id):
                 # We have to add an exception here if this list is empty. Group 4 is doing some weird stuff.
                 if len(post_json["posts"]) == 0:
                     # We have no post to update from.
-                    return local_copy
+                    # This is now how team 4 tells us the post does not exist >:(
+                    Post.objects.get(id=post_id).delete()
+                    return None
                 post_json["post"] = post_json["posts"][0]
                 del post_json["posts"]
             post_data = post_json['post']
