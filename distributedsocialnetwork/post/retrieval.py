@@ -14,7 +14,6 @@ from author.models import Author
 
 # The purpose of this is to provide functions that can import Posts from the other Nodes.
 # Each Node may not be completely to spec, so we may have to add server-specific compatibility here and there.
-GLOBAL_TIMEOUT = 10
 
 
 def sanitize_author(obj):
@@ -138,7 +137,7 @@ def get_public_posts():
             #     url, auth=(
             #         node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'})
             response = requests.get(
-                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                url, auth=(node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
             if response.status_code == 200:
                 # print(response.json())
                 # We have the geen light to continue. Otherwise, we just use what we have cached.
@@ -229,7 +228,7 @@ def get_detailed_post(post_id):
         try:
             response = requests.get(
                 url, auth=(
-                    node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                    node.node_auth_username, node.node_auth_password), headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
         except Timeout:
             print("Request to", url, "timed out")
             return None
@@ -298,7 +297,7 @@ def get_comments(pk):
         url = node.api_url + 'posts/' + local_split[-1] + '/comments'
         try:
             response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password),
-                                    headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                                    headers={'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
         except Timeout:
             print("Request to", url, "timed out")
             return Comment.objects.filter(post_id=pk)
@@ -393,14 +392,14 @@ def post_foreign_comment(new_comment):
     print("Sending comment to", url)
     try:
         response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+            'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
         if response.status_code == 500:
             # We should try again with a backslash
             print("sending comment to", url)
             try:
                 url = url + '/'
                 response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                    'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                    'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
             except Exception as e:
                 print(e)
                 response = None
@@ -411,7 +410,7 @@ def post_foreign_comment(new_comment):
         try:
             url = url + '/'
             response = requests.post(url, json=query, auth=(node.node_auth_username, node.node_auth_password), headers={
-                'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
         except Exception as e:
             print(e)
             response = None

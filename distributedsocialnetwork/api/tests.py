@@ -791,10 +791,10 @@ class AuthorPosts(APITestCase):
         response = self.client.get(url, format='json')
         # We should be seeing 6 posts
         self.assertEqual(len(response.data["posts"]), 6)
-        # If we log in as the foreign author, we should be able to retrieve 2 posts
+        # If we log in as the foreign author, we should be able to retrieve all posts originating from us
         self.client.force_authenticate(user=self.node_author)
         response = self.client.get(url, format='json')
-        self.assertEqual(len(response.data["posts"]), 2)
+        self.assertEqual(len(response.data["posts"]), 3)
 
 
 class AuthorFriendsList(APITestCase):
