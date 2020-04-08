@@ -162,7 +162,7 @@ class ForeignPosts(APIView):
     # Returned as HTML for simple front-end integration.
     def get(self, request):
         posts = Post.objects.filter(visibility="PUBLIC", unlisted=False).exclude(
-            origin__icontains=settings.FORMATTED_HOST_NAME)[:10]
+            origin__icontains=settings.FORMATTED_HOST_NAME)
         context = {}
         context["posts"] = source_convert(posts)
         return render(request, 'stream.html', context)
@@ -547,11 +547,11 @@ class GetImage(APIView):
                 # It is an image, at least.
                 if post.visibility == "PUBLIC":
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "PRIVATE" and user.id in post.visibleTo:
+                if post.visibility == "PRIVATE" and (user.id in post.visibleTo or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FRIENDS" and Friend.objects.are_friends(user, post.author):
+                if post.visibility == "FRIENDS" and (Friend.objects.are_friends(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FOAF" and Friend.objects.are_foaf(user, post.author):
+                if post.visibility == "FOAF" and (Friend.objects.are_foaf(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
@@ -572,7 +572,6 @@ class GetImage(APIView):
                         post_json['post'] = post_json
                     if 'posts' in post_json.keys():
                         # For some reason, they can return an empty list here
-                        print(len(post_json["posts"]))
                         if len(post_json["posts"]) == 0:
                             return Response({"content": placeholder}, status=status.HTTP_200_OK)
                         post_json["post"] = post_json["posts"][0]
