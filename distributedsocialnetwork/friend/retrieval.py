@@ -132,6 +132,8 @@ def update_friends_list(author_id):
             # The exact same thing, but mandala makes us use the author page.
             for friend in friends_response["friends"]:
                 friend_id = friend["id"]
+                if 'http' not in friend_id:
+                    friend_id = 'https://' + friend_id
                 friend_host = author_id.split('author/')[0]
                 if len(Node.objects.filter(hostname=friend_host)) == 1:
                     stored = True
