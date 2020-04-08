@@ -505,7 +505,7 @@ class GetImage(APIView):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "FRIENDS" and (Friend.objects.are_friends(user, post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
-                if post.visibility == "FOAF" and (Friend.objects.are_foaf(user, post.author) or user.id == post.author.id):
+                if post.visibility == "FOAF" and (user in Friend.objects.get_foaf(post.author) or user.id == post.author.id):
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
                 if post.visibility == "SERVERONLY" and user.host in settings.FORMATTED_HOST_NAME:
                     return Response({"content": post.content}, status=status.HTTP_200_OK)
