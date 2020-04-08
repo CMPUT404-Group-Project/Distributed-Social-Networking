@@ -156,5 +156,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 HOST_NAME = ENV('HOST_NAME')
 FORMATTED_HOST_NAME = 'http://' + HOST_NAME + '/api/'
 
+# How many seconds before we give up on a request
+GLOBAL_TIMEOUT = 5
+
 # Heroku
 django_heroku.settings(locals())
