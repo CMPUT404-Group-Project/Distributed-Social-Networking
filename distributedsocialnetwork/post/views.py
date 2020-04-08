@@ -60,9 +60,11 @@ def view_post(request, pk):
                 if (new_comment.post_id.origin.split(
                         '/')[2] != settings.HOST_NAME):
                     res = post_foreign_comment(new_comment)
-                    print(res)
                     if (res != None and (res.status_code == 201 or res.status_code == 200)):
-                        new_comment.save()
+                        # If this is a post that we have on our server, we should save it. Otherwise, don't do that, since it will save two comments.
+                        post = Post.objects.get(id=pk)
+                        if settings.FORMATTED_HOST_NAME in post.origin:
+                            new_comment.save()
                         # We want to redirect them to the post page
                         post_page = new_comment.post_id.source.split(
                             'api/')[0] + new_comment.post_id.source.split('api/')[-1]
