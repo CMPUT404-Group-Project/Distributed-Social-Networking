@@ -22,7 +22,6 @@ from post.retrieval import sanitize_post, sanitize_author, transformSource
 
 # The following are some tools for paginating and generating a lot of the nitty gritty details of GET responses
 # involving lists of posts and comments
-GLOBAL_TIMEOUT = 10
 
 
 def post_list_generator(request, query_set):
@@ -268,7 +267,7 @@ class PostDetailView(APIView):
                                     'author/')[-1] + '/friends/' + author_id
                             try:
                                 response = requests.get(url, auth=(node.node_auth_username, node.node_auth_password), headers={
-                                                        'content-type': 'application/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                                                        'content-type': 'application/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
                                 if response.status_code == 200:
                                     response_data = response.json()
                                     if response_data["friends"]:
@@ -519,7 +518,7 @@ class GetImage(APIView):
                     hostname=post_link.split('posts/')[0])
                 response = requests.get(post_link, auth=(
                     node.node_auth_username, node.node_auth_password), headers={
-                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                    'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
                 if response.status_code == 200:
                     post_json = response.json()
                     if 'post' not in post_json.keys():
@@ -539,12 +538,12 @@ class GetImage(APIView):
                     post_data = transformSource(post_data)
                     post = sanitize_post(post_data)
                     # # We should also be saving this post, so we can do this faster next time.
-                    # post_serializer = PostSerializer(data=post)
-                    # if post_serializer.is_valid():
-                    #     try:
-                    #         post_serializer.save()
-                    #     except Exception as e:
-                    #         print("Could not cache image", e)
+                    post_serializer = PostSerializer(data=post)
+                    if post_serializer.is_valid():
+                        try:
+                            post_serializer.save()
+                        except Exception as e:
+                            print("Could not cache image", e)
                     # And now we have to check to see if we can actually see this post
                     if post["visibility"] == "PUBLIC":
                         return Response({"content": post["content"]}, status=status.HTTP_200_OK)
@@ -561,7 +560,7 @@ class GetImage(APIView):
                         # We gotta actually query the other server to see if we can see this
                         try:
                             friends_response = requests.get(post["author"]["id"] + '/friends', auth=(
-                                node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=GLOBAL_TIMEOUT)
+                                node.node_auth_username, node.node_auth_password), headers={'content-type': 'appliation/json', 'Accept': 'application/json'}, timeout=settings.GLOBAL_TIMEOUT)
                             if friends_response.status_code == 200:
                                 response_json = friends_response.json()
                                 for author in response_json["authors"]:

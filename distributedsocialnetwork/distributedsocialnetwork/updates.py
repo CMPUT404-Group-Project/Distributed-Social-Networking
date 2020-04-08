@@ -43,7 +43,7 @@ def update_detailed_posts(node):
         start = time.time()
         get_detailed_post(post.id)
         end = time.time()
-        if (end - start) >= 9:
+        if (end - start) >= settings.GLOBAL_TIMEOUT:
             print('<<<<<< ENDED Foreign Post Update from', node.server_username)
             return False
     print('<<<<<< Foreign Post Update Complete from', node.server_username)
@@ -59,14 +59,14 @@ def update_all_foreign_authors(node):
         start = time.time()
         update_friends_list(author.id)
         end = time.time()
-        if (end-start) >= 9:
+        if (end-start) >= settings.GLOBAL_TIMEOUT:
             print('<<<<<< ENDED Foreign Author Update from', node.server_username)
             return False
         else:
             start = time.time()
             get_detailed_author(author.id)
             end = time.time()
-            if (end-start) >= 9:
+            if (end-start) >= settings.GLOBAL_TIMEOUT:
                 print('<<<<<< ENDED Foreign Author Update from',
                       node.server_username)
                 return False
