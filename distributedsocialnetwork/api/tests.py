@@ -640,8 +640,8 @@ class AuthUserPosts(APITestCase):
         self.foreignAuthor = Author.objects.create(
             id="http://foreignsite.com/author/" + str(uuid.uuid4().hex), host="http://foreignsite.com", url="http://foreignsite.com", displayName="ForeignAuthor", github="", email="wahtever@email.com")
         # And we also make a Node with which to authenticate this author
-        self.node = Node.objects.create(hostname="http://foreignsite.com",
-                                        api_url="http://foreignsite.com", server_username="node", server_password="node")
+        self.node = Node.objects.create(hostname="http://foreignsite.com/",
+                                        api_url="http://foreignsite.com/", server_username="node", server_password="node")
         self.node_author = Author.objects.get(displayName="node")
         # We will make some friends here:
         # Author 1 will be friends with Author 2
