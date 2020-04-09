@@ -10,6 +10,7 @@ This project is a more manageable implementation of [Diaspora\*](https://diaspor
 * Website: https://dsnfof.herokuapp.com/
 * API URL: https://dsnfof.herokuapp.com/api/
 * API Documentation: https://github.com/CMPUT404-Group-Project/Distributed-Social-Networking/wiki/API-Documentation
+* AJAX Documentation: https://github.com/CMPUT404-Group-Project/Distributed-Social-Networking/wiki/AJAX-Documentation
 
 ### CMPUT404W20T03 Members
 
