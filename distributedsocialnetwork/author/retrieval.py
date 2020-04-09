@@ -228,7 +228,7 @@ def get_github_activity(author_id):
                 # Set the origin to include the event's github id, so we can
                 # check if we've seen it before.
                 origin = url + "/" + str(event["id"])
-                if len(Post.objects.filter(origin=origin)) == 1:
+                if len(Post.objects.filter(origin=origin)) >= 1:
                     # already seen this event
                     continue
                 try:
