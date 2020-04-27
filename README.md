@@ -11,7 +11,7 @@ This project is a more manageable implementation of [Diaspora\*](https://diaspor
 * API URL: https://dsnfof.herokuapp.com/api/
 * API Documentation: https://github.com/CMPUT404-Group-Project/Distributed-Social-Networking/wiki/API-Documentation
 * AJAX Documentation: https://github.com/CMPUT404-Group-Project/Distributed-Social-Networking/wiki/AJAX-Documentation
-
+* Video Demo: https://www.youtube.com/watch?v=NxqoZLq7Kzc
 ### CMPUT404W20T03 Members
 
 ```
