@@ -4,7 +4,7 @@ autopep8==1.5
 bleach>=3.1.2
 bleach-whitelist==0.0.10
 dj-database-url==0.5.0
-Django==3.0.7
+Django==3.1.6
 django-environ==0.4.5
 django-heroku==0.3.1
 django-markup==1.4.1
